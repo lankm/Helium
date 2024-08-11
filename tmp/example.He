@@ -1,0 +1,61 @@
+# This is a comment. It must have a pound sign at the begining and end #
+#
+Development notes
+- arrays must be of a single type. accessed by index
+- sets must be of a single type. accessed by name
+- tuples can contain multiple types. accessed by index
+- objects can contain multiple types. accessed by name
+
+Types
+  Primitives
+  - int: integer
+    - nul: int<0>
+    - bit: bool. int<1>
+    - chr: character. int<8>
+    * int<8>, int<16>, int<32>, int<64>
+  - whl: whole number
+    * whl<8>, whl<16>, whl<32>, whl<64>
+  - flt: floating point number
+    * flt<32>, flt<64>
+
+  Non-primitives
+  - str: string
+  - utf: Unicode Transformation Format
+    * utf<8>, utf<16>, utf<32>
+
+  Size
+  - var: variable
+
+  OS
+  - dir: directory
+  - fil: file
+
+  Datastructures
+  - arr: array
+    - vtx: vertex. arr<edg>
+    * arr<10, int<32>>
+  - set: set
+    - map: map. set<kvp>
+    - gph: graph. set<vrt>
+      - tre: tree
+        - lst: list
+    * set<24, flt<32>>
+  - tup: tuple
+    - kvp: key value pair
+    - edg: edge. tup<w, v>
+  - obj: object
+
+  Paradigm
+  - fun: function. kvp of a tuple of types to a statement
+
+  Questionable
+  - thr: thread
+  - fxt: fixed point number
+  - rat: rational number
+
+Declaration
+
+grapes: arr<int<32>> = [1,2,3,4];
+#
+
+test (())()
