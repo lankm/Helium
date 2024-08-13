@@ -1,6 +1,8 @@
 # This is a comment. It must have a pound sign at the begining and end #
 #
 Development notes
+- whitespace characters do not apply to syntax
+
 - arrays must be of a single type. accessed by index
 - sets must be of a single type. accessed by name
 - tuples can contain multiple types. accessed by index
@@ -20,6 +22,8 @@ Types
 
   Non-primitives
   - str: string
+    - rgx: regex
+    - sql: Structured Query Language
   - utf: Unicode Transformation Format
     * utf<8>, utf<16>, utf<32>
 
@@ -54,8 +58,13 @@ Types
   - rat: rational number
 
 Declaration
-
-grapes: arr<int<32>> = [1,2,3,4];
 #
+count: int<16>;
+names: set<str> = {"Landon","Jacob","Thomas"};
+email: str<utf<8>> = "lankm@live.com";
+phone_number: str<chr> = "(546) 849-5684";
+person: obj<str<chr>,int<32>> = {name: "John", age: 34};
 
-test (())()
+
+
+fun 

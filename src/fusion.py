@@ -1,45 +1,45 @@
 import sys
 import re
 
-# this is just a very simple string parser. will learn abstract syntax trees
+
+input = ''
+location = 0
+
+def parse(text):
+    global input, location
+    match = re.search(text, input[location:])
+    if match:
+        string = match.group()
+        length = len(string)
+        location += length
+        return True
+    else:
+        return False
+
+
+def parseComment():
+    return parse(r'^\s*#[^#]*#')
+def parseInt():
+    return parse(r'^\s*\w*\s*:\s*int<(8|16|32|64)>')
 def main():
+    global input, location
     filename = sys.argv[1]
     file = open(filename)
+    input = file.read()
 
-    state = {
-        '#': False,
-        '(': 0,
-        ')': 0,
-    }
-    isComment = False
+    parseComment()
+    parseComment()
+    parseInt()
 
-    output = ''
-
-    for i, line in enumerate(file.readlines()):
-        for char in line:
-            isComment = state['#']
-            if re.match(r'\s', char):
-                continue
-            match (char):
-                case '#':
-                    state['#'] = not isComment
-                    continue
-                case '(':
-                    state['('] += 1
-                case ')':
-                    state[')'] += 1
-            
-            if state[')'] > state['(']:
-                print(f'Error on line {i}')
-                exit()
-            
-            if not isComment:
-                output += char
-                
-    if state[')'] != state['(']:
-        print(f'Error on line ${i}')
-    else:
-        sys.stdout.write(output)
+    print(input[location:])
 
 if __name__ == '__main__':
     main()
+
+
+#
+# Lexing ( splitting into tokens )
+# Parsing ( generationg abstract syntax tree )
+# Semantic Analysis ( check syntax is correct )
+# Optimization
+#
