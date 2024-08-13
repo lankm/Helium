@@ -1,45 +1,56 @@
 import sys
 import re
+import json
+from abc import ABC, abstractmethod
 
+# Token specifications
+token_specification = {
+    'WORD':     r'[a-zA-Z]+',      # 
+    'NUMBER':   r'\d+',      # Integer or decimal number
+    'PLUS':     r'\+',       # Addition
+    'MINUS':    r'-',        # Subtraction
+    'MUL':      r'\*',       # Multiplication
+    'DIV':      r'/',        # Division
+    'LPAREN':   r'\(',       # Left Parenthesis
+    'RPAREN':   r'\)',       # Right Parenthesis
+    'SKIP':     r'\s+',      # Skip spaces and tabs
+    'COMMENT':  r'#',        # 
+    'DOT':      r'\.',        # 
+    'COLON':    r':',        # 
+    'LARROW':   r'<',        # 
+    'RARROW':   r'>',        # 
+    'COMMA':    r',',        # 
+    'SCOLON':   r';',        # 
+    'EQUAL':   r'=',        # 
+    'EQUAL':   r'=',        # 
+    'EQUAL':   r'=',        # 
+}
+WHITESPACE = r'^\s+'
+STRSET = r'^(".*"|\'.*\'|[a-zA-Z_]+|\d+|[^\s+])'
 
-input = ''
-location = 0
+def tokenize(input):
+    tokens = []
+    while input:
+        match = re.match(WHITESPACE, input)
+        if match:
+            input = input[match.end():]
+            continue
 
-def parse(text):
-    global input, location
-    match = re.search(text, input[location:])
-    if match:
-        string = match.group()
-        length = len(string)
-        location += length
-        return True
-    else:
-        return False
+        match = re.match(STRSET, input)
+        if match:
+            token_value = match.group(0)
+            tokens.append(token_value)
+            input = input[match.end():]
+            continue
 
+        raise ValueError(f"Unexpected token: {input[0]}")
+    return tokens 
 
-def parseComment():
-    return parse(r'^\s*#[^#]*#')
-def parseInt():
-    return parse(r'^\s*\w*\s*:\s*int<(8|16|32|64)>')
 def main():
-    global input, location
     filename = sys.argv[1]
-    file = open(filename)
-    input = file.read()
-
-    parseComment()
-    parseComment()
-    parseInt()
-
-    print(input[location:])
+    with open(filename) as file:
+        tokens = tokenize(file.read())
+        print(tokens)
 
 if __name__ == '__main__':
     main()
-
-
-#
-# Lexing ( splitting into tokens )
-# Parsing ( generationg abstract syntax tree )
-# Semantic Analysis ( check syntax is correct )
-# Optimization
-#
