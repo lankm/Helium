@@ -1,2 +1,4 @@
 *.Be
+*.o
+*.exe
 tempCodeRunnerFile.*

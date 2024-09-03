@@ -31,13 +31,16 @@ typesArray = [
     Type('flt','floating point number',primitives),
     Type('fxt','fixed point number',primitives),
     Type('rat','rational number',primitives),
+    Type('ptr','pointer',primitives),
     Type('arr','array',datastructures),
     Type('vtx','vertex',datastructures),
     Type('set','set',datastructures),
     Type('map','map',datastructures),
     Type('gph','graph',datastructures),
     Type('tre','tree',datastructures),
+    Type('ast','abstract syntax tree',datastructures),
     Type('lst','list',datastructures),
+    Type('cfg','context free grammer',datastructures),
     Type('tup','tuple',datastructures),
     Type('kvp','key value pair',datastructures),
     Type('edg','edge',datastructures),
@@ -55,6 +58,10 @@ typesArray = [
     Type('utf','Unicode Transformation Format',other),
     Type('fun','function',other),
 ]
+
+for i in range(31, 127):
+    print(f"- {chr(i)}: ")
+exit()
 
 types = set(typesArray)
 if len(typesArray) != len(types):

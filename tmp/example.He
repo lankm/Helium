@@ -1,12 +1,80 @@
 # This is a comment. It must have a pound sign at the begining and end #
 #
+- !:
+- ": Strings
+- #: Comment
+- $:
+- %: Math
+- &:
+- ': Characters
+- (:
+- ):
+- *: Math Boolean
+- +: Math Boolean
+- ,: Data
+- -: Math Boolean
+- .:
+- /:
+- 0: User-Defined
+...
+- :: Types
+- ;: Code
+- <: Types Boolean
+- =: Assignment
+- >: Types Boolean
+- ?:
+- @:
+- A: User-Defined
+...
+- [: Data
+- \: Math
+- ]: Data
+- ^: Math Boolean
+- _:
+- `:
+- a: User-Defined
+...
+- {: Code
+- |:
+- }: Code
+- ~:
+#
+#
 Development notes
 - whitespace characters do not apply to syntax
+- separation of code and data
+  - code: {;;;;}
+  - data: [,,,,]
+- no += *= ...
+- no Keywords
+- functional programming is focused over oop
+  - interfaces instead of abstract classes
+  - obj(struct) can append another obj
+- everything passes by reference. cloning is explicit
+- primitive types
+  - typ
+    - int <1|8|16|*32|64>
+    - whl <1|8|16|*32|64>
+    - bit
+    - flt <*32|64>
+    - utf <*8|16|32>
+    - str <length?, utf>
 
-- arrays must be of a single type. accessed by index
-- sets must be of a single type. accessed by name
-- tuples can contain multiple types. accessed by index
-- objects can contain multiple types. accessed by name
+    - arr <length?, typ>  // ordered, homogeneous, defined
+    - lst <typ>           // ordered, homogeneous, undefined
+    - rec <typ...>        // ordered, heterogrneous, defined
+    -                     // unordered, homogeneous, defined
+    - map <key, value>    // unordered, homogeneous, undefined
+    - obj <typ...>        // unordered, heterogrneous, defined
+        
+
+
+TODO
+- types need to be able to be defined in terms of themselves.
+  ex: a vertex in a node is some data + a list of edges to other vertexes
+- types need be able to be multiple types
+  ex: a leaf vs non-leaf vertex in a tree
+
 
 Types
   Primitives
@@ -19,6 +87,8 @@ Types
     * whl<8>, whl<16>, whl<32>, whl<64>
   - flt: floating point number
     * flt<32>, flt<64>
+  - ptr: pointer
+    - adr: address, void ptr
 
   Non-primitives
   - str: string
@@ -36,17 +106,22 @@ Types
 
   Datastructures
   - arr: array
-    - vtx: vertex. arr<edg>
+    - vtx: vertex. tup<?,set<edg<>>>
     * arr<10, int<32>>
   - set: set
     - map: map. set<kvp>
-    - gph: graph. set<vrt>
+      - cfg: context free grammer
+    - gph: graph. set<vtx>
       - tre: tree
         - lst: list
-    * set<24, flt<32>>
+        - ast: abstract syntax tree. tre<rgx>
+    * set requires the items to define hash() and equ()
   - tup: tuple
-    - kvp: key value pair
-    - edg: edge. tup<w, v>
+    - kvp: key value pair. tup<k, v>
+      * hash(k), equ(k)
+    - edg: edge. tup<v, w>
+      * hash(v), equ(adr)
+    * tup<int<8>,int<16>>
   - obj: object
 
   Paradigm
@@ -59,12 +134,24 @@ Types
 
 Declaration
 #
+
+
+
+
 count: int<16>;
-names: set<str> = {"Landon","Jacob","Thomas"};
-email: str<utf<8>> = "lankm@live.com";
-phone_number: str<chr> = "(546) 849-5684";
-person: obj<str<chr>,int<32>> = {name: "John", age: 34};
+name: str = "";
+mid_init = 'K';
+cost: flt = 12.24;
 
-
-
-fun 
+counts: arr<int> = [32, 43, 54, 65];
+car: obj<int,str> = [
+  wheels: int = 4,
+  model: str = "Focus",
+];
+total = {
+  person: typ = obj<
+    obj<str,chr,str>,
+    int
+  >
+}
+{mid_init == 'M'} ? {} ! {};
