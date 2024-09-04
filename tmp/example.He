@@ -1,44 +1,65 @@
 # This is a comment. It must have a pound sign at the begining and end #
+
+# Character Mapping
+  - !:
+  - ": Strings
+  - #: Comment
+  - $:
+  - %: Math
+  - &:
+  - ': Characters
+  - (:
+  - ):
+  - *: Math Boolean
+  - +: Math Boolean
+  - ,: Data
+  - -: Math Boolean
+  - .:
+  - /:
+  - 0: User-Defined
+  ...
+  - :: Types
+  - ;: Code
+  - <: Types Boolean
+  - =: Assignment
+  - >: Types Boolean
+  - ?:
+  - @:
+  - A: User-Defined
+  ...
+  - [: Data
+  - \: Math
+  - ]: Data
+  - ^: Math Boolean
+  - _:
+  - `:
+  - a: User-Defined
+  ...
+  - {: Code
+  - |:
+  - }: Code
+  - ~:
 #
-- !:
-- ": Strings
-- #: Comment
-- $:
-- %: Math
-- &:
-- ': Characters
-- (:
-- ):
-- *: Math Boolean
-- +: Math Boolean
-- ,: Data
-- -: Math Boolean
-- .:
-- /:
-- 0: User-Defined
-...
-- :: Types
-- ;: Code
-- <: Types Boolean
-- =: Assignment
-- >: Types Boolean
-- ?:
-- @:
-- A: User-Defined
-...
-- [: Data
-- \: Math
-- ]: Data
-- ^: Math Boolean
-- _:
-- `:
-- a: User-Defined
-...
-- {: Code
-- |:
-- }: Code
-- ~:
+
+# Context Free grammer
+  HELIUM       ->
+  IDENTIFIER   -> [a-zA-Z_]+
+  BIT          -> [01]
+  WHOLE_NUMBER -> [0-9]+
+  INTEGER      -> -?[0-9]+
+  NUMBER       -> -?[0-9]+(.[0-9]+)?
+  STRING       -> " .* "
+  CHAR         -> ' .+ '
+  TYPE         -> IDENTIFIER (< TYPEVAL (, TYPEVAL)* >)?
+  TYPEVAL      -> TYPE | WHOLE_NUMBER
+  ARRAY        -> [ (VALUE (, VALUE)*)? ]
+  RECORD       -> [ (DEFINITION (, DEFINITION)*)? ]
+  VALUE        -> STRING | CHAR | NUMBER | ARRAY | RECORD
+  DEFINITION   -> IDENTIFIER : TYPE = VALUE
+  STATEMENT    -> DEFINITION
+  BLOCK        -> { (STATEMENT (; STATEMENT)*)? }
 #
+
 #
 Development notes
 - whitespace characters do not apply to syntax

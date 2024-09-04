@@ -27,9 +27,10 @@ class ProductionRule(ABC):
     def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None: pass
 
 class Terminal(ProductionRule):
-    def __init__(self, pattern: str, ignored=False):
+    def __init__(self, pattern: str, ignored=False, repeat=False):
         self.pattern = re.compile(pattern)
         self.ignored = ignored
+        self.repeat = repeat
 
     def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None:
         remaining = input[index:]
@@ -42,9 +43,10 @@ class Terminal(ProductionRule):
         return ParsedAbstractSyntaxNode(newIndex, AbstractSyntaxNode(name, [value]))
 
 class NonTerminal(ProductionRule):
-    def __init__(self, rules: List[str], ignored=False):
+    def __init__(self, rules: List[str], ignored=False, repeat=False):
         self.rules = rules
         self.ignored = ignored
+        self.repeat = repeat
 
     def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None:
         curIndex = index
@@ -53,7 +55,6 @@ class NonTerminal(ProductionRule):
             if rule not in CFG:
                 raise Exception(f'{rule} is not a production rule.')
             
-            remaining = input[curIndex:]
             result: ParsedAbstractSyntaxNode | None = CFG[rule].consume(rule, input, curIndex, CFG)
             if result == None: # no match
                 return None
@@ -102,6 +103,10 @@ def main():
     })
     AST = CFG.parse(input, 'HELIUM')
     print(AST)
+    # TODO: need support for 'or' rules (|||) and for 'and' rules (&&&)
+    # TODO: need support for modifiers (+*?) NOTE ? can be dealt with as 'or empty'. + is *+1
+    # TODO: rules must be able to be ignored so the AST isn't overpopulated
+    # keep the terminal - nonterminal setup
     
 
 if __name__ == '__main__':

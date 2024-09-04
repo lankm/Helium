@@ -1,75 +1,181 @@
-class Type:
-    def __init__(self, name, description: str, group: str):
-        self.name = name
-        self.desc = description
-        self.group = group
-    def __lt__(self, other):
-        if self.group == other.group:
-            return self.name < other.name
-        else:
-            return self.group < other.group
-    def __hash__(self):
-        return hash(self.name[0:2])
-    def __eq__(self, other):
-        return self.name[0:2] == other.name[0:2]
+import re
+import json
+
+class Syntax:
+    def __init__(self, label, value):
+        self.label = label
+        self.value = value
+
     def __str__(self):
-        return f'  {self.name}: {self.desc}'
+        return json.dumps(self.__dict__, default = lambda o: o.__dict__, indent=4)
+class ParsedSyntax:
+    def __init__(self, index, syntax):
+        self.index = index
+        self.syntax = syntax
+    def __bool__(self):
+        return True
+
+class Rule:  # abstract
+    def __init__(self, value, ignore=False):
+        self.label = None
+        self.CFG = None
+        self.value = value
+        self.ignore = ignore
+
+    def __repr__(self):
+        return str(self.value)
     
+class Terminal(Rule):
+    def parse(self, input, index) -> ParsedSyntax | bool:
+        remaining = input[index:]
+        pattern = self.value
+        match = re.match(pattern, remaining)
+        if match:
+            value = match.group()
+            newIndex = index + len(value)
+            return ParsedSyntax(newIndex, Syntax(self.label, value))
+        return False
 
-primitives = 'Primitive'
-datastructures = 'Datastructures'
-operating_system = 'Operating System'
-format = 'Format'
-other = 'Other'
+class NonTerminal(Rule): # abstract    
+    def splitRule(rule):
+        return re.split(r'(?<!^)\b', rule)
+    def parseQuantifier(rule, quantifier, input, index) -> ParsedSyntax | bool:
+        values = []
+        curentIndex = index
+        match quantifier:
+            case '':
+                result = rule.parse(input, curentIndex)
+                if not result:
+                    return False
+                if not rule.ignore:
+                    values.append(result.syntax)
+                curentIndex = result.index
+            case '+':
+                result = rule.parse(input, curentIndex)
+                if not result:
+                    return False
+                while result:
+                    if not rule.ignore:
+                        values.append(result.syntax)
+                    curentIndex = result.index
+                    result = rule.parse(input, curentIndex)
+            case '*':
+                result = rule.parse(input, curentIndex)
+                while result:
+                    if not rule.ignore:
+                        values.append(result.syntax)
+                    curentIndex = result.index
+                    result = rule.parse(input, curentIndex)
+            case '?':
+                result = rule.parse(input, curentIndex)
+                if result:
+                    if not rule.ignore:
+                        values.append(result.syntax)
+                    curentIndex = result.index
+        return ParsedSyntax(curentIndex, values)
+class Conjunction(NonTerminal):
+    def __repr__(self):
+        return ' & '.join(self.value)
+    
+    def parse(self, input, index) -> ParsedSyntax | bool:
+        rules = self.value
 
-typesArray = [
-    Type('int','integer',primitives),
-    Type('nul','null',primitives),
-    Type('bit','boolean',primitives),
-    Type('chr','character',primitives),
-    Type('whl','whole number',primitives),
-    Type('flt','floating point number',primitives),
-    Type('fxt','fixed point number',primitives),
-    Type('rat','rational number',primitives),
-    Type('ptr','pointer',primitives),
-    Type('arr','array',datastructures),
-    Type('vtx','vertex',datastructures),
-    Type('set','set',datastructures),
-    Type('map','map',datastructures),
-    Type('gph','graph',datastructures),
-    Type('tre','tree',datastructures),
-    Type('ast','abstract syntax tree',datastructures),
-    Type('lst','list',datastructures),
-    Type('cfg','context free grammer',datastructures),
-    Type('tup','tuple',datastructures),
-    Type('kvp','key value pair',datastructures),
-    Type('edg','edge',datastructures),
-    Type('obj','object',datastructures),
-    Type('dir','directory',operating_system),
-    Type('fil','file',operating_system),
-    Type('thr','thread',operating_system),
-    Type('htm','HyperText Markup Language',format),
-    Type('csv','Comma Separated Value',format),
-    Type('xml','Extensible Markup Language',format),
-    Type('jsn','JavaScript Object Notation',format),
-    Type('rgx','regular expression',format),
-    Type('sql','Structured Query Language',format),
-    Type('str','string',other),
-    Type('utf','Unicode Transformation Format',other),
-    Type('fun','function',other),
-]
+        curentIndex = index
+        values = []
+        for rule in rules:
+            (rule, quantifier) = NonTerminal.splitRule(rule)
+            if rule not in self.CFG:
+                raise Exception(f'{rule} is not a production rule.')
+            rule = self.CFG[rule]
 
-for i in range(31, 127):
-    print(f"- {chr(i)}: ")
-exit()
+            result = NonTerminal.parseQuantifier(rule, quantifier, input, curentIndex)
+            if not result:
+                return False
+            curentIndex = result.index
+            values.extend(result.syntax)
 
-types = set(typesArray)
-if len(typesArray) != len(types):
-    raise Exception('duplicate key')
+        return ParsedSyntax(curentIndex, Syntax(self.label, values))
 
-group = None
-for type in sorted(types):
-    if type.group != group:
-        group = type.group
-        print(group)
-    print(type)
+class Disjunction(NonTerminal):
+    def __repr__(self):
+        return ' | '.join(self.value)
+    
+    def parse(self, input, index) -> ParsedSyntax | bool:
+        rules = self.value
+
+        curentIndex = index
+        for rule in rules:
+            (rule, quantifier) = NonTerminal.splitRule(rule)
+            if rule not in self.CFG:
+                raise Exception(f'{rule} is not a production rule.')
+            rule = self.CFG[rule]
+
+            result = rule.parse(input, curentIndex) # 1-TODO add parseQuantifier() functionality
+            if result:
+                self.ignore = rule.ignore
+                return result
+            
+        return False
+
+class CFG(dict):
+    def __init__(self, dictionary):
+        for key, value in dictionary.items():
+            self.__setitem__(key, value)
+
+    def __setitem__(self, key, value):
+        value.label = key
+        value.CFG = self
+        super().__setitem__(key,value)
+    
+    def parse(self, input, rule) -> ParsedSyntax | bool:
+        result = self.__getitem__(rule).parse(input, 0)
+        if result:
+            return result.syntax
+        return False
+    
+Helium = CFG({
+    'HELIUM':           Conjunction(['START','DEFINITION','END']),
+    'START':            Terminal(r'^', ignore=True),
+    'END':              Terminal(r'$', ignore=True),
+
+    'IDENTIFIER':       Terminal(r'[a-zA-Z_]+'),
+    'BIT':              Terminal(r'[01]'),
+    'WHOLE_NUMBER':     Terminal(r'[0-9]+'),
+    'INTEGER':          Terminal(r'-?[0-9]+'),
+    'NUMBER':           Terminal(r'-?[0-9]+(\.[0-9]+)?'),
+    'STRING':           Terminal(r'".*"'),
+    'CHAR':             Terminal(r'\'.\''),
+    'LT':               Terminal(r'<', ignore=True),
+    'GT':               Terminal(r'>', ignore=True),
+    'LB':               Terminal(r'\['),
+    'RB':               Terminal(r'\]'),
+    'LCB':              Terminal(r'{'),
+    'RCB':              Terminal(r'}'),
+    'COMMA':            Terminal(r','),
+    'COLON':            Terminal(r':', ignore=True),
+    'SEMI':             Terminal(r';'),
+    'EQUAL':            Terminal(r'=', ignore=True),
+    'HASH':             Terminal(r'#'), # 2-TODO make optional flag
+    'NON_HASH':         Terminal(r'[^#]*'),
+
+    'COMMENT':          Conjunction(['HASH','NON_HASH','HASH']),
+
+    'TYPEVAL':          Disjunction(['TYPE','WHOLE_NUMBER']),
+    'TYPEVAL_LIST':     Conjunction(['COMMA','TYPEVAL']),
+    'GENERIC':          Conjunction(['LT','TYPEVAL','TYPEVAL_LIST*','GT']), # <int,32,str<8>>
+    'TYPE':             Conjunction(['IDENTIFIER','GENERIC?']),
+
+    'VALUE':            Disjunction(['STRING','CHAR','NUMBER','ARRAY','RECORD']),
+    'VALUE_LIST':       Conjunction(['COMMA','VALUE']), # 3-TODO make conjuctions collapsesable with flag
+    'ARRAY':            Conjunction(['LB','VALUE','VALUE_LIST*','RB']), # [123,""]
+    'RECORD':           Conjunction(['LB','DEFINITION','DEFINITION_LIST*','RB']), # [a:int=123,b:str=""]
+
+    'DEFINITION':       Conjunction(['IDENTIFIER','COLON','TYPE','EQUAL','VALUE']),
+    'DEFINITION_LIST':  Conjunction(['COMMA', 'DEFINITION']),
+    'STATEMENT':        Disjunction(['DEFINITION']),
+    'STATEMENT_LIST':   Conjunction(['SEMI', 'STATEMENT']),
+
+    'CODE_BLOCK':       Conjunction(['LCB','STATEMENT','STATEMENT_LIST*','RCB']), # {a:int=1;b:str=""}
+})
+ast = Helium.parse('abc:int=123.123','HELIUM')
+print(str(ast))
