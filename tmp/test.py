@@ -1,5 +1,6 @@
 import re
 import json
+import sys
 
 class Syntax:
     def __init__(self, label, value):
@@ -7,7 +8,7 @@ class Syntax:
         self.value = value
 
     def __str__(self):
-        return json.dumps(self.__dict__, default = lambda o: o.__dict__, indent=4)
+        return json.dumps(self.__dict__, default = lambda o: o.__dict__, indent=2)
 class ParsedSyntax:
     def __init__(self, index, syntax):
         self.index = index
@@ -16,11 +17,12 @@ class ParsedSyntax:
         return True
 
 class Rule:  # abstract
-    def __init__(self, value, ignore=False):
+    def __init__(self, value, ignore=False, collapsible=False):
         self.label = None
         self.CFG = None
         self.value = value
         self.ignore = ignore
+        self.collapsible = collapsible
 
     def __repr__(self):
         return str(self.value)
@@ -94,6 +96,8 @@ class Conjunction(NonTerminal):
             curentIndex = result.index
             values.extend(result.syntax)
 
+        if self.collapsible and len(values) == 1:
+            return ParsedSyntax(curentIndex, values[0])
         return ParsedSyntax(curentIndex, Syntax(self.label, values))
 
 class Disjunction(NonTerminal):
@@ -134,7 +138,7 @@ class CFG(dict):
         return False
     
 Helium = CFG({
-    'HELIUM':           Conjunction(['START','DEFINITION','END']),
+    'HELIUM':           Conjunction(['START','CODE_BLOCK','END']),
     'START':            Terminal(r'^', ignore=True),
     'END':              Terminal(r'$', ignore=True),
 
@@ -147,35 +151,39 @@ Helium = CFG({
     'CHAR':             Terminal(r'\'.\''),
     'LT':               Terminal(r'<', ignore=True),
     'GT':               Terminal(r'>', ignore=True),
-    'LB':               Terminal(r'\['),
-    'RB':               Terminal(r'\]'),
-    'LCB':              Terminal(r'{'),
-    'RCB':              Terminal(r'}'),
-    'COMMA':            Terminal(r','),
+    'LB':               Terminal(r'\[', ignore=True),
+    'RB':               Terminal(r'\]', ignore=True),
+    'LCB':              Terminal(r'{', ignore=True),
+    'RCB':              Terminal(r'}', ignore=True),
+    'COMMA':            Terminal(r',', ignore=True),
     'COLON':            Terminal(r':', ignore=True),
-    'SEMI':             Terminal(r';'),
+    'SEMI':             Terminal(r';', ignore=True),
     'EQUAL':            Terminal(r'=', ignore=True),
-    'HASH':             Terminal(r'#'), # 2-TODO make optional flag
+    'HASH':             Terminal(r'#'),
     'NON_HASH':         Terminal(r'[^#]*'),
 
-    'COMMENT':          Conjunction(['HASH','NON_HASH','HASH']),
+    'COMMENT':          Conjunction(['HASH','NON_HASH','HASH'], ignore=True),
 
     'TYPEVAL':          Disjunction(['TYPE','WHOLE_NUMBER']),
-    'TYPEVAL_LIST':     Conjunction(['COMMA','TYPEVAL']),
+    'TYPEVAL_LIST':     Conjunction(['COMMA','TYPEVAL'], collapsible=True),
     'GENERIC':          Conjunction(['LT','TYPEVAL','TYPEVAL_LIST*','GT']), # <int,32,str<8>>
     'TYPE':             Conjunction(['IDENTIFIER','GENERIC?']),
 
     'VALUE':            Disjunction(['STRING','CHAR','NUMBER','ARRAY','RECORD']),
-    'VALUE_LIST':       Conjunction(['COMMA','VALUE']), # 3-TODO make conjuctions collapsesable with flag
+    'VALUE_LIST':       Conjunction(['COMMA','VALUE'], collapsible=True),
     'ARRAY':            Conjunction(['LB','VALUE','VALUE_LIST*','RB']), # [123,""]
     'RECORD':           Conjunction(['LB','DEFINITION','DEFINITION_LIST*','RB']), # [a:int=123,b:str=""]
 
     'DEFINITION':       Conjunction(['IDENTIFIER','COLON','TYPE','EQUAL','VALUE']),
-    'DEFINITION_LIST':  Conjunction(['COMMA', 'DEFINITION']),
+    'DEFINITION_LIST':  Conjunction(['COMMA', 'DEFINITION'], collapsible=True),
     'STATEMENT':        Disjunction(['DEFINITION']),
-    'STATEMENT_LIST':   Conjunction(['SEMI', 'STATEMENT']),
+    'STATEMENT_LIST':   Conjunction(['SEMI', 'STATEMENT'], collapsible=True),
 
     'CODE_BLOCK':       Conjunction(['LCB','STATEMENT','STATEMENT_LIST*','RCB']), # {a:int=1;b:str=""}
 })
-ast = Helium.parse('abc:int=123.123','HELIUM')
+
+filename = sys.argv[1]
+file = open(filename)
+input = file.read()
+ast = Helium.parse(input,'HELIUM')
 print(str(ast))
