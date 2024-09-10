@@ -1,0 +1,52 @@
+{
+  "HELIUM": {
+    "CODE_BLOCK": [
+      {
+        "STATEMENT": {
+          "DEFINITION": {
+            "VALUE": {
+              "ARRAY": [
+                {
+                  "NUMBER": "1"
+                },
+                {
+                  "NUMBER": "2"
+                },
+                {
+                  "NUMBER": "3"
+                }
+              ]
+            },
+            "TYPE": {
+              "IDENTIFIER": "int"
+            },
+            "IDENTIFIER": "abc"
+          }
+        }
+      },
+      {
+        "STATEMENT": {
+          "DEFINITION": {
+            "VALUE": {
+              "ARRAY": [
+                {
+                  "NUMBER": "1"
+                },
+                {
+                  "NUMBER": "2"
+                },
+                {
+                  "NUMBER": "3"
+                }
+              ]
+            },
+            "TYPE": {
+              "IDENTIFIER": "int"
+            },
+            "IDENTIFIER": "test"
+          }
+        }
+      }
+    ]
+  }
+}

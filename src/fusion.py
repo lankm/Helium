@@ -1,113 +1,177 @@
 import sys
-from abc import ABC, abstractmethod
-from typing import List, Dict, Pattern, Tuple
+from collections import ChainMap, namedtuple
 import re
+from abc import ABC, abstractmethod
 import json
-import subprocess
 
-class AbstractSyntaxNode:
-    def __init__(self, type: str, values: List[str]):
-        self.type = type
-        self.values = values
+def Syntax(label, value):
+    return {label: value}
 
-    def to_dict(self):
-        return self.__dict__
+def merge(syntax_list):
+    return dict(ChainMap(*syntax_list))
 
-    def __str__(self):
-        return json.dumps(self.__dict__, default = lambda o: o.__dict__, indent=4) 
+ParsedSyntax = namedtuple('ParsedSyntax', ['length','syntax'])
 
-class ParsedAbstractSyntaxNode:
-    def __init__(self, index: int, node: AbstractSyntaxNode):
-        self.index = index
-        self.node = node
+class ContextFreeGrammer(dict):
+    singleton = None
+    def __init__(self, starting_rule, rules):
+        self.starting_rule = starting_rule
+        for key, value in rules.items():
+            self.__setitem__(key, value)
+        ContextFreeGrammer.singleton = self
 
-
-class ProductionRule(ABC):
-    @abstractmethod
-    def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None: pass
-
-class Terminal(ProductionRule):
-    def __init__(self, pattern: str, ignored=False, repeat=False):
-        self.pattern = re.compile(pattern)
-        self.ignored = ignored
-        self.repeat = repeat
-
-    def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None:
-        remaining = input[index:]
-        match = self.pattern.match(remaining)
-        if not match:
-            return None
-        
-        value = match.group()
-        newIndex = index + len(value)
-        return ParsedAbstractSyntaxNode(newIndex, AbstractSyntaxNode(name, [value]))
-
-class NonTerminal(ProductionRule):
-    def __init__(self, rules: List[str], ignored=False, repeat=False):
-        self.rules = rules
-        self.ignored = ignored
-        self.repeat = repeat
-
-    def consume(self, name: str, input: str, index: int, CFG) -> ParsedAbstractSyntaxNode | None:
-        curIndex = index
+    def __setitem__(self, key, value):
+        value.label = key
+        super().__setitem__(key,value)
+    
+    def parse(self, input):
+        result = self.__getitem__(self.starting_rule).parse(input)
+        if result:
+            return result.syntax
+        return False
+    
+class Rule(ABC):
+    CFG = ContextFreeGrammer.singleton
+    def __init__(self, value, isSyntax=True, isList=False, expose=False):
+        self.value = value
+        self.isSyntax = isSyntax
+        self.isList = isList
+        self.expose = expose
+    
+    def splitRule(rule):
+        return re.split(r'(?<!^)\b', rule)
+    def parseQuantifier(rule, quantifier, input) -> ParsedSyntax | bool:
         values = []
-        for rule in self.rules:
-            if rule not in CFG:
-                raise Exception(f'{rule} is not a production rule.')
-            
-            result: ParsedAbstractSyntaxNode | None = CFG[rule].consume(rule, input, curIndex, CFG)
-            if result == None: # no match
-                return None
-            else: # consumed input
-                curIndex = result.index
-                if not CFG[rule].ignored:
-                    values.append(result.node)
-        return ParsedAbstractSyntaxNode(curIndex, AbstractSyntaxNode(name, values))
-
-
-class ContextFreeGrammer:
-    def __init__(self, rules: Dict[str, ProductionRule]):
-        self.productionRules = rules
+        curentIndex = 0
+        match quantifier:
+            case '':
+                result = rule.parse(input[curentIndex:])
+                if not result:
+                    return False
+                values.append(result.syntax)
+                curentIndex += result.length
+            case '*':
+                result = rule.parse(input[curentIndex:])
+                while result:
+                    values.append(result.syntax)
+                    curentIndex += result.length
+                    result = rule.parse(input[curentIndex:])
+            case '?':
+                result = rule.parse(input[curentIndex:])
+                if result:
+                    values.append(result.syntax)
+                    curentIndex += result.length
+        return ParsedSyntax(curentIndex, values)
     
-    def parse(self, input: str, rule: str) -> AbstractSyntaxNode:
+    @abstractmethod
+    def parse(self, input: str) -> ParsedSyntax | bool: pass
+
+class Terminal(Rule):
+    def parse(self, input: str) -> ParsedSyntax | bool:
+        match = re.match(self.value, input)
+        if not match:
+            return False
+        value = match.group()
+        return ParsedSyntax(len(value), Syntax(self.label, value))
+class Conjunction(Rule):
+    def parse(self, input: str) -> ParsedSyntax | bool:
         index = 0
-        if rule not in self.productionRules:
-            raise Exception(f'{rule} is not a production rule.')
+        values = []
+        for rule in self.value:
+            (rule, quantifier) = Rule.splitRule(rule)
+            rule = CFG[rule]
+            result = Rule.parseQuantifier(rule, quantifier, input[index:])
 
-        result: ParsedAbstractSyntaxNode | None = self.productionRules[rule].consume(rule, input, index, self.productionRules)
-        if result is None:
-            return None
-        
-        return result.node
+            if not result:
+                return False
             
+            index += result.length
+            if rule.isSyntax:
+                values.extend(result.syntax)
+
+        if self.expose and self.isList: # simplify the list if all of the same type
+            return ParsedSyntax(index, Syntax(self.label, list(map(lambda s: s[self.expose],values))))
+
+        if self.expose:
+            return ParsedSyntax(index, Syntax(self.expose, merge(values)[self.expose]))
+        
+        if not self.isList:
+            values = merge(values)
+        return ParsedSyntax(index, Syntax(self.label, values))
+class Disjunction(Rule):
+    def parse(self, input: str) -> ParsedSyntax | bool:
+        for rule in self.value:
+            rule = CFG[rule]
+
+            result = rule.parse(input)
+            if result:
+                return ParsedSyntax(result.length, Syntax(self.label, result.syntax))
+        return False
 
 
-def main():
-    filename = sys.argv[1]
-    file = open(filename)
-    input = file.read()
+def parseArgs():
+    inputStream = sys.stdin
+    if len(sys.argv) > 1:
+        inputFileName = sys.argv[1]
+        inputStream = open(inputFileName, 'r')
 
-    CFG = ContextFreeGrammer({
-        'HELIUM':     NonTerminal(['START','TEST','END']),
-        'START':         Terminal('^', ignored=True),
-        'END':           Terminal('$', ignored=True),
-        'HASH':          Terminal('#'),
-        'COLON':         Terminal(':'),
-        'EQUAL':         Terminal('='),
-        'NONHASH':       Terminal('[^#]*'),
-        'COMMENT':    NonTerminal(['HASH','NONHASH','HASH'], ignored=True),
-        'LABEL':         Terminal('[a-zA-Z_]+'),
-        'NUMBER':        Terminal('\d+'),
-        'ASSIGNMENT': NonTerminal(['LABEL','EQUAL','NUMBER']),
-        'TEST':       NonTerminal(['COMMENT','ASSIGNMENT','COMMENT']),
-    })
-    AST = CFG.parse(input, 'HELIUM')
-    print(AST)
-    # TODO: need support for 'or' rules (|||) and for 'and' rules (&&&)
-    # TODO: need support for modifiers (+*?) NOTE ? can be dealt with as 'or empty'. + is *+1
-    # TODO: rules must be able to be ignored so the AST isn't overpopulated
-    # keep the terminal - nonterminal setup
-    
+    outputStream = sys.stdout
+    if len(sys.argv) > 2:
+        outputFileName = sys.argv[2]
+        outputStream = open(outputFileName, 'w')
+
+    return (inputStream, outputStream)
 
 if __name__ == '__main__':
-    main()
+    (inputStream, outputStream) = parseArgs()
+    input = re.sub(r'\s', '', inputStream.read())
+
+    CFG = ContextFreeGrammer("HELIUM", {
+        'HELIUM':           Conjunction(['START','CODE_BLOCK','END']),
+        'START':            Terminal(r'^', isSyntax=False),
+        'END':              Terminal(r'$', isSyntax=False),
+
+        'IDENTIFIER':       Terminal(r'[a-zA-Z_]+'),
+        'BIT':              Terminal(r'[01]'),
+        'WHOLE_NUMBER':     Terminal(r'[0-9]+'),
+        'INTEGER':          Terminal(r'-?[0-9]+'),
+        'NUMBER':           Terminal(r'-?[0-9]+(\.[0-9]+)?'),
+        'STRING':           Terminal(r'".*"'),
+        'CHAR':             Terminal(r'\'.\''),
+        'LT':               Terminal(r'<', isSyntax=False),
+        'GT':               Terminal(r'>', isSyntax=False),
+        'LB':               Terminal(r'\[', isSyntax=False),
+        'RB':               Terminal(r'\]', isSyntax=False),
+        'LCB':              Terminal(r'{', isSyntax=False),
+        'RCB':              Terminal(r'}', isSyntax=False),
+        'COMMA':            Terminal(r',', isSyntax=False),
+        'COLON':            Terminal(r':', isSyntax=False),
+        'SEMI':             Terminal(r';', isSyntax=False),
+        'EQUAL':            Terminal(r'=', isSyntax=False),
+        'HASH':             Terminal(r'#'),
+        'NON_HASH':         Terminal(r'[^#]*'),
+
+        'COMMENT':          Conjunction(['HASH','NON_HASH','HASH'], isSyntax=False),
+
+        'TYPEVAL':          Disjunction(['TYPE','WHOLE_NUMBER']),
+        'TYPEVAL_LIST':     Conjunction(['COMMA','TYPEVAL'], expose="TYPEVAL"),
+        'GENERIC':          Conjunction(['LT','TYPEVAL','TYPEVAL_LIST*','GT'], isList=True, expose="TYPEVAL"), # <int,32,str<8>>
+        'TYPE':             Conjunction(['IDENTIFIER','GENERIC?']),
+
+        'VALUE':            Disjunction(['STRING','CHAR','NUMBER','ARRAY','RECORD']),
+        'VALUE_LIST':       Conjunction(['COMMA','VALUE'], expose="VALUE"),
+        'ARRAY':            Conjunction(['LB','VALUE','VALUE_LIST*','RB'], isList=True, expose="VALUE"), # [123,""]
+        'RECORD':           Conjunction(['LB','DEFINITION','DEFINITION_LIST*','RB'], isList=True, expose="DEFINITION"), # [a:int=123,b:str=""]
+
+        'DEFINITION':       Conjunction(['IDENTIFIER','COLON','TYPE','EQUAL','VALUE']),
+        'DEFINITION_LIST':  Conjunction(['COMMA', 'DEFINITION'], expose="DEFINITION"),
+        'STATEMENT':        Disjunction(['DEFINITION']),
+        'STATEMENT_LIST':   Conjunction(['SEMI', 'STATEMENT'], expose="STATEMENT"),
+
+        'CODE_BLOCK':       Conjunction(['LCB','STATEMENT','STATEMENT_LIST*','RCB'], isList=True), # {a:int=1;b:str=""}
+    })
+
+    AST = CFG.parse(input)
+    outputStream.write(json.dumps(AST, indent=2))
+
+
