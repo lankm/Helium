@@ -1,0 +1,38 @@
+#
+  NUMBERS
+    int - -5256
+    whl - 4584
+    flt - 12.54
+    bit - 1
+  CHARACTER
+    str - "Hello, world"
+    utf - 'a'
+  CONTAINER
+    arr - [1,2,3]
+    rec - [a=1,b=2]
+  COMPUTER
+    ptr
+    fun - {}
+
+  DATASTRUCTURE
+    set
+      map
+      kvp
+    gph
+      vtx
+      edg
+    lst
+      que
+      stk
+  INTERFACE
+    hash
+    equal
+
+#
+
+test_fn = (age:int, name:str) {
+  return [
+    name:str=name, 
+    age:int=age
+  ]
+}

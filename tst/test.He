@@ -1,4 +1,7 @@
 {
-    abc:int=[1,2,3];
-    test:int=[1,2,3]
+    abc:rec<int,str,bit>=[
+        year:a=4234,
+        label:a="Hello, world",
+        on:a=1
+    ]
 }

@@ -33,10 +33,10 @@ class ContextFreeGrammer(dict):
 class Rule(ABC):
     CFG = ContextFreeGrammer.singleton
     def __init__(self, value, isSyntax=True, isList=False, expose=False):
-        self.value = value
-        self.isSyntax = isSyntax
-        self.isList = isList
-        self.expose = expose
+        self.value = value # content describing the rule
+        self.isSyntax = isSyntax # include in the syntax tree
+        self.isList = isList # differentiate between list and dict
+        self.expose = expose # simplyfy or act like an other rule
     
     def splitRule(rule):
         return re.split(r'(?<!^)\b', rule)
@@ -107,6 +107,40 @@ class Disjunction(Rule):
             if result:
                 return ParsedSyntax(result.length, Syntax(self.label, result.syntax))
         return False
+class List(Rule):
+    def __init__(self, left, content, delimit, right, expose=False):
+        self.left = left
+        self.content = content
+        self.delimit = delimit
+        self.right = right
+        self.expose = expose
+        self.isSyntax = True
+    def parse(self, input: str) -> ParsedSyntax | bool:
+        index = 0
+        
+        left_result = CFG[self.left].parse(input[index:])
+        if not left_result: return False
+        index += left_result.length
+
+        values = []
+        content_result = CFG[self.content].parse(input[index:])
+        if not content_result: return False
+        while content_result:
+            index += content_result.length
+            values.append(content_result.syntax[self.content])
+            
+            delimit_result = CFG[self.delimit].parse(input[index:])
+            if delimit_result:
+                index += delimit_result.length
+                content_result = CFG[self.content].parse(input[index:])
+            else:
+                break
+
+        right_result = CFG[self.right].parse(input[index:])
+        if not right_result: return False
+        index += right_result.length
+
+        return ParsedSyntax(index, Syntax(self.label, values))
 
 
 def parseArgs():
@@ -154,24 +188,19 @@ if __name__ == '__main__':
         'COMMENT':          Conjunction(['HASH','NON_HASH','HASH'], isSyntax=False),
 
         'TYPEVAL':          Disjunction(['TYPE','WHOLE_NUMBER']),
-        'TYPEVAL_LIST':     Conjunction(['COMMA','TYPEVAL'], expose="TYPEVAL"),
-        'GENERIC':          Conjunction(['LT','TYPEVAL','TYPEVAL_LIST*','GT'], isList=True, expose="TYPEVAL"), # <int,32,str<8>>
-        'TYPE':             Conjunction(['IDENTIFIER','GENERIC?']),
-
         'VALUE':            Disjunction(['STRING','CHAR','NUMBER','ARRAY','RECORD']),
-        'VALUE_LIST':       Conjunction(['COMMA','VALUE'], expose="VALUE"),
-        'ARRAY':            Conjunction(['LB','VALUE','VALUE_LIST*','RB'], isList=True, expose="VALUE"), # [123,""]
-        'RECORD':           Conjunction(['LB','DEFINITION','DEFINITION_LIST*','RB'], isList=True, expose="DEFINITION"), # [a:int=123,b:str=""]
+        'STATEMENT':        Disjunction(['DEFINITION']),
 
         'DEFINITION':       Conjunction(['IDENTIFIER','COLON','TYPE','EQUAL','VALUE']),
-        'DEFINITION_LIST':  Conjunction(['COMMA', 'DEFINITION'], expose="DEFINITION"),
-        'STATEMENT':        Disjunction(['DEFINITION']),
-        'STATEMENT_LIST':   Conjunction(['SEMI', 'STATEMENT'], expose="STATEMENT"),
+        'TYPE':             Conjunction(['IDENTIFIER','GENERIC?']), # TODO make this optional
 
-        'CODE_BLOCK':       Conjunction(['LCB','STATEMENT','STATEMENT_LIST*','RCB'], isList=True), # {a:int=1;b:str=""}
+        'ARRAY':            List("LB","VALUE",     "COMMA","RB"),
+        'RECORD':           List("LB","DEFINITION","COMMA","RB"),
+        'GENERIC':          List("LT","TYPEVAL",   "COMMA","GT"),
+        'CODE_BLOCK':       List("LCB","STATEMENT","SEMI","RCB"),
+
+
     })
 
     AST = CFG.parse(input)
     outputStream.write(json.dumps(AST, indent=2))
-
-

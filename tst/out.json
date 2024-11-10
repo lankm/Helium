@@ -2,49 +2,59 @@
   "HELIUM": {
     "CODE_BLOCK": [
       {
-        "STATEMENT": {
-          "DEFINITION": {
-            "VALUE": {
-              "ARRAY": [
-                {
+        "DEFINITION": {
+          "VALUE": {
+            "RECORD": [
+              {
+                "VALUE": {
+                  "NUMBER": "4234"
+                },
+                "TYPE": {
+                  "IDENTIFIER": "a"
+                },
+                "IDENTIFIER": "year"
+              },
+              {
+                "VALUE": {
+                  "STRING": "\"Hello,world\""
+                },
+                "TYPE": {
+                  "IDENTIFIER": "a"
+                },
+                "IDENTIFIER": "label"
+              },
+              {
+                "VALUE": {
                   "NUMBER": "1"
                 },
-                {
-                  "NUMBER": "2"
+                "TYPE": {
+                  "IDENTIFIER": "a"
                 },
-                {
-                  "NUMBER": "3"
+                "IDENTIFIER": "on"
+              }
+            ]
+          },
+          "TYPE": {
+            "GENERIC": [
+              {
+                "TYPE": {
+                  "IDENTIFIER": "int"
                 }
-              ]
-            },
-            "TYPE": {
-              "IDENTIFIER": "int"
-            },
-            "IDENTIFIER": "abc"
-          }
-        }
-      },
-      {
-        "STATEMENT": {
-          "DEFINITION": {
-            "VALUE": {
-              "ARRAY": [
-                {
-                  "NUMBER": "1"
-                },
-                {
-                  "NUMBER": "2"
-                },
-                {
-                  "NUMBER": "3"
+              },
+              {
+                "TYPE": {
+                  "IDENTIFIER": "str"
                 }
-              ]
-            },
-            "TYPE": {
-              "IDENTIFIER": "int"
-            },
-            "IDENTIFIER": "test"
-          }
+              },
+              {
+                "TYPE": {
+                  "IDENTIFIER": "bit"
+                }
+              }
+            ],
+            "IDENTIFIER": "rec"
+          },
+          "IDENTIFIER": "abc"
         }
       }
     ]

@@ -31,7 +31,7 @@
   - \: Math
   - ]: Data
   - ^: Math Boolean
-  - _:
+  - _: User-Defined
   - `:
   - a: User-Defined
   ...
@@ -115,6 +115,9 @@ Types
   - str: string
     - rgx: regex
     - sql: Structured Query Language
+    - url: Uniform Resource Locator
+    - jsn: Javascript Object Notation
+    - csv: Comma Separated Value
   - utf: Unicode Transformation Format
     * utf<8>, utf<16>, utf<32>
 
@@ -169,10 +172,7 @@ car: obj<int,str> = [
   wheels: int = 4,
   model: str = "Focus",
 ];
-total = {
-  person: typ = obj<
-    obj<str,chr,str>,
-    int
-  >
-}
-{mid_init == 'M'} ? {} ! {};
+car.wheels = 24;
+counts[3] = 23
+
+for(cost < 5, {})
