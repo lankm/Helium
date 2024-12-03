@@ -40,139 +40,102 @@
   - }: Code
   - ~:
 #
-
-# Context Free grammer
-  HELIUM       ->
-  IDENTIFIER   -> [a-zA-Z_]+
-  BIT          -> [01]
-  WHOLE_NUMBER -> [0-9]+
-  INTEGER      -> -?[0-9]+
-  NUMBER       -> -?[0-9]+(.[0-9]+)?
-  STRING       -> " .* "
-  CHAR         -> ' .+ '
-  TYPE         -> IDENTIFIER (< TYPEVAL (, TYPEVAL)* >)?
-  TYPEVAL      -> TYPE | WHOLE_NUMBER
-  ARRAY        -> [ (VALUE (, VALUE)*)? ]
-  RECORD       -> [ (DEFINITION (, DEFINITION)*)? ]
-  VALUE        -> STRING | CHAR | NUMBER | ARRAY | RECORD
-  DEFINITION   -> IDENTIFIER : TYPE = VALUE
-  STATEMENT    -> DEFINITION
-  BLOCK        -> { (STATEMENT (; STATEMENT)*)? }
 #
+  PARADIGM
+  [ ] STRUCTURED
+    [x] Sequence     {a;b;c;}
+    [ ] Repetition   for, while
+    [x] Selection    ? c : {} ! {}
+    [x] Subroutine   f(x:T):T = {f = 2*x}
+  [ ] OBJECT ORIENTED
+    [ ] Encapsulation class
+    [ ] Abstraction   abstract
+    [ ] Inheritance   extend
+    [ ] Polymorphism  
+  [ ] FUNCTIONAL
+    [ ] Immutability const
+    [ ] Pure Functions
+    [ ] Higher Order Functions
+  [ ] OWNERSHIP
+    [ ] own
+    [ ] borrow
 
+  MATHMATICS
+  [ ] NUMBER THEORY
+  [ ] GEOMETRY
+  [ ] ALGEBRA
+    [ ] Boolean
+    [ ] Linear
+  [ ] DISCRETE
+    [ ] Graph
+  [ ] SET THEORY
+  [ ] LOGIC
+  [ ] PROBABILITY & STATISTICS
+
+  SCIENCE
+  [ ] Units
+  [ ] Tests
+  [ ] Logging
 #
-Development notes
-- whitespace characters do not apply to syntax
-- separation of code and data
-  - code: {;;;;}
-  - data: [,,,,]
-- no += *= ...
-- no Keywords
-- functional programming is focused over oop
-  - interfaces instead of abstract classes
-  - obj(struct) can append another obj
-- everything passes by reference. cloning is explicit
-- primitive types
-  - typ
-    - int <1|8|16|*32|64>
-    - whl <1|8|16|*32|64>
-    - bit
-    - flt <*32|64>
-    - utf <*8|16|32>
-    - str <length?, utf>
-
-    - arr <length?, typ>  // ordered, homogeneous, defined
-    - lst <typ>           // ordered, homogeneous, undefined
-    - rec <typ...>        // ordered, heterogrneous, defined
-    -                     // unordered, homogeneous, defined
-    - map <key, value>    // unordered, homogeneous, undefined
-    - obj <typ...>        // unordered, heterogrneous, defined
-        
-
-
-TODO
-- types need to be able to be defined in terms of themselves.
-  ex: a vertex in a node is some data + a list of edges to other vertexes
-- types need be able to be multiple types
-  ex: a leaf vs non-leaf vertex in a tree
-
-
-Types
-  Primitives
-  - int: integer
-    - nul: int<0>
-    - bit: bool. int<1>
-    - chr: character. int<8>
-    * int<8>, int<16>, int<32>, int<64>
-  - whl: whole number
-    * whl<8>, whl<16>, whl<32>, whl<64>
-  - flt: floating point number
-    * flt<32>, flt<64>
-  - ptr: pointer
-    - adr: address, void ptr
-
-  Non-primitives
-  - str: string
-    - rgx: regex
-    - sql: Structured Query Language
-    - url: Uniform Resource Locator
-    - jsn: Javascript Object Notation
-    - csv: Comma Separated Value
-  - utf: Unicode Transformation Format
-    * utf<8>, utf<16>, utf<32>
-
-  Size
-  - var: variable
-
-  OS
-  - dir: directory
-  - fil: file
-
-  Datastructures
-  - arr: array
-    - vtx: vertex. tup<?,set<edg<>>>
-    * arr<10, int<32>>
-  - set: set
-    - map: map. set<kvp>
-      - cfg: context free grammer
-    - gph: graph. set<vtx>
-      - tre: tree
-        - lst: list
-        - ast: abstract syntax tree. tre<rgx>
-    * set requires the items to define hash() and equ()
-  - tup: tuple
-    - kvp: key value pair. tup<k, v>
-      * hash(k), equ(k)
-    - edg: edge. tup<v, w>
-      * hash(v), equ(adr)
-    * tup<int<8>,int<16>>
-  - obj: object
-
-  Paradigm
-  - fun: function. kvp of a tuple of types to a statement
-
-  Questionable
-  - thr: thread
-  - fxt: fixed point number
-  - rat: rational number
-
-Declaration
 #
+  ? conditional
+    : {}
+    ! {}
+  ==
+  <=
+  >=
+  <
+  >
+  |
+  &
+  ^
+  !
 
+  +
+  -
+  *
+  /
+  %
+  <<
+  >>
 
+  =
 
+  +=
+  -=
+  *=
+  /=
+  --
+  ++
+#
+{
+  # An identifier is a location in memory #
+  # A type defines the size in memory #
 
-count: int<16>;
-name: str = "";
-mid_init = 'K';
-cost: flt = 12.24;
+  identifier: type<generic> = value;
+  identifier(parameter: type<generic>): type<generic> = {};
+  identifier: type<generic> = identifier(argument);
 
-counts: arr<int> = [32, 43, 54, 65];
-car: obj<int,str> = [
-  wheels: int = 4,
-  model: str = "Focus",
-];
-car.wheels = 24;
-counts[3] = 23
+  sub(a: int, b: int): int = {
+    sub = a-b
+  };
 
-for(cost < 5, {})
+  fibonacci(n: int): int = {
+    ?  n<=0 : 
+      {fibonacci = 0}
+    !? n==1 :
+      {fibonacci = 1}
+    ! 
+      {fibonacci = fibonacci(n-1) + fibonacci(n-2)}
+  };
+
+  factorial(n: int): int = {
+    ? n<0 :
+      {factorial = -1}
+    !? n==0 :
+      {factorial = 1}
+    !
+      {factorial = factorial(n-1)*n}
+  }
+}
+
