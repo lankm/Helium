@@ -1,0 +1,65 @@
+~stdlib
+
+Sandbox():=[
+    main(args:String):={
+        stdlib.io.println("Hello, World!")
+    }
+]
+
+
+
+
+
+Constructors() := [
+    Person(age:int, name:string) := [
+        getAge() := {getAge := age},
+        getName() := {getName := name}
+    ],
+];
+
+new := Constructors();
+author := new.Person(23, "Landon");
+name = author.getName()
+
+stdout := new.Stdout();
+stdout.printf(name)
+
+i = 0;
+@ (i < 5) {
+    i := i+1
+}
+
+{
+  condition := 1=1;
+  ? (condition) {}
+  ? (!condition) {}
+}
+
+
+
+UserInterface:=[
+    login(): Bool,
+    logout():,
+    isLoggedIn(): Bool
+];
+
+User(loggedIn:=false):UserInterface=[
+    login(username:String, password: String) := {
+        username == "user" && password == "pass"
+          ? login:=true
+          ! login:=false
+    },
+    logout() := {
+        loggedIn := false
+    },
+    isLoggedIn():Bool = {
+        isLoggedIn := loggedIn
+    }
+];
+Administrator():User = [
+    login(username:String, password: String) := {
+        username == "user" && password == "adminw"
+          ? login := true
+          ! login := false
+    },
+]

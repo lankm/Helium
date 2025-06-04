@@ -1,0 +1,29 @@
+<pre style="background:#1e1e1e; color:#d4d4d4; padding:1em; border-radius:8px; font-family:monospace; overflow:auto;">
+<span style="color:#569cd6;">UserInterface</span>:=[
+    <span style="color:#dcdcaa;">login</span>(): <span style="color:#4ec9b0;">Bool</span>,
+    <span style="color:#dcdcaa;">logout</span>():,
+    <span style="color:#dcdcaa;">isLoggedIn</span>(): <span style="color:#4ec9b0;">Bool</span>
+];
+
+<span style="color:#569cd6;">User</span>(<span style="color:#9cdcfe;">loggedIn</span> := <span style="color:#569cd6;">false</span>):<span style="color:#569cd6;">UserInterface</span> =[
+    <span style="color:#dcdcaa;">login</span>(<span style="color:#9cdcfe;">username</span>:<span style="color:#4ec9b0;">String</span>, <span style="color:#9cdcfe;">password</span>: <span style="color:#4ec9b0;">String</span>) := {
+        <span style="color:#9cdcfe;">username</span> == <span style="color:#ce9178;">"user"</span> &amp;&amp; <span style="color:#9cdcfe;">password</span> == <span style="color:#ce9178;">"pass"</span>
+          ? <span style="color:#9cdcfe;">login</span> := <span style="color:#569cd6;">true</span>
+          ! <span style="color:#9cdcfe;">login</span> := <span style="color:#569cd6;">false</span>
+    },
+    <span style="color:#dcdcaa;">logout</span>() := {
+        <span style="color:#9cdcfe;">loggedIn</span> := <span style="color:#569cd6;">false</span>
+    },
+    <span style="color:#dcdcaa;">isLoggedIn</span>():<span style="color:#4ec9b0;">Bool</span> = {
+        <span style="color:#dcdcaa;">isLoggedIn</span> := <span style="color:#9cdcfe;">loggedIn</span>
+    }
+];
+
+<span style="color:#569cd6;">Administrator</span>():<span style="color:#569cd6;">User</span> = [
+    <span style="color:#dcdcaa;">login</span>(<span style="color:#9cdcfe;">username</span>:<span style="color:#4ec9b0;">String</span>, <span style="color:#9cdcfe;">password</span>: <span style="color:#4ec9b0;">String</span>) := {
+        <span style="color:#9cdcfe;">username</span> == <span style="color:#ce9178;">"user"</span> &amp;&amp; <span style="color:#9cdcfe;">password</span> == <span style="color:#ce9178;">"adminw"</span>
+          ? <span style="color:#9cdcfe;">login</span> := <span style="color:#569cd6;">true</span>
+          ! <span style="color:#9cdcfe;">login</span> := <span style="color:#569cd6;">false</span>
+    },
+];
+</pre>
