@@ -1,0 +1,6 @@
+stdlib = \"\deps.He";
+[str, print] = stdlib;
+
+(argv=[str]) : {
+    print("Hello World");
+}

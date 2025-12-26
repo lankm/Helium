@@ -1,0 +1,1 @@
+Training ground to learn x86 asm. x86 is chosen simply because it is the archetecture of my PC and I don't want to go through the hastle of a VM

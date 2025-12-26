@@ -1,0 +1,142 @@
+% Core Principles =============================================================
+  - no keywords
+  - whitepace agnostic
+  - clear data/code split
+%
+% Character Semantics =========================================================
+  statements
+    ? if
+      : do
+      ! else
+    @ while
+      : do
+    ^ return
+    = assign
+    
+  expressions
+    .    access
+    #    length
+    /    import
+    +-*/ arithmatic
+    &|~  boolean
+    0    int
+    0.0  float
+    ' '  character
+    " "  string
+
+  pairs
+    {;} code
+    [,] data
+    (,) invoke
+    <,> generic
+    % % comment
+
+  identifiers
+    ABCDEFGHIJKLMNOPQRSTUVWXYZ
+    abcdefghijklmnopqrstuvwxyz
+    0123456789_
+
+  unused
+    $`\
+%
+% CLI =========================================================================
+  helium main.He
+%
+% Examples ================================================================== %
+stdlib = /"/deps.He";
+
+variables() = {
+  age = 0;       % integer     %
+  length = 0.0;  % float       %
+  name = "";     % string      %
+  initial = '';  % character   %
+  numbers = [    % array       %
+    0,
+    0,
+    0,
+  ];
+  color = [      % structure   %
+    r=0,
+    g=0,
+    b=0,
+  ];
+  fn = () : {    % function    %
+    ^ 0;
+  };
+  nothing = _;   % null        %
+  none = ?:int;  % null        %
+  some = ?!int;  % nullable    %
+}
+
+comparisons() = {
+  cond = 0 << 0;  % less than             %
+  cond = 0 =< 0;  % less than or equal    %
+  cond = 0 == 0;  % equal                 %
+  cond = 0 >= 0;  % greater than or equal %
+  cond = 0 >> 0;  % greater than          %
+  cond = 0 >< 0;  % not equal             %
+}
+
+algebra() = {
+  num = 0.0 + 0.0;  % add      %
+  num = 0.0 - 0.0;  % subtract %
+  num = 0.0 * 0.0;  % multiply %
+  num = 0.0 / 0.0;  % divide   %
+}
+
+booleans() = {
+  bool = 0 & 0;  % and %
+  bool = 0 | 0;  % or  %
+  bool = ~0;     % not %
+}
+
+string() = {
+  str1 = "abc";
+  str2 = "def";
+  length = #str;       % length %
+  temp = str[0];       % access %
+  str[0] = temp;       % modify %
+  str3 = str1 + str2;  % concat %
+  str4 = str3 * 5;     % repeat %
+}
+
+arrays() = {
+  arr1 = [1,2,3];
+  arr2 = [4,5,6];
+  temp = arr1[0];      % access % % TODO I dont like this %
+  arr1[0] = temp;      % modify %
+  length = #arr1;      % length %
+  arr3 = arr1 + arr2;  % concat %
+  arr4 = arr1 * 5;     % repeat %
+  % TODO  slicing? %
+}
+
+records() = {
+  obj1 = [a=0, b=0];
+  obj2 = [c=0, d=0];
+  temp = obj1.a;       % access %
+  obj1.a = temp;       % modify %
+  obj3 = obj1 + obj2;  % concat %
+}
+
+enums() = {
+  enum1 = [a,b,c];
+  temp = enum1.a;      % access %
+}
+
+controlFlow() = {
+  ? cond        % if      %
+    : {}        % do      %
+    ! {};       % else    %
+
+  @ cond        % while   %
+    : {};       % do      %
+
+  val = ? cond  % ternary %
+    : 0         % true    %
+    ! 1;        % false   %
+
+  num = { 1 + 2 } * 3;  % order of operations %
+
+  ^ 0;          % return  %
+}
