@@ -1,7 +1,0 @@
-{
-    abc:rec<int,str,bit>=[
-        year:a=4234,
-        label:a="Hello, world",
-        on:a=1
-    ]
-}

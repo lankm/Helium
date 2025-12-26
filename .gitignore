@@ -3,3 +3,5 @@
 *.exe
 tempCodeRunnerFile.*
 .vscode
+*/node_modules
+*/dist
