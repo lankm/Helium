@@ -4,8 +4,7 @@ import chalk from "chalk";
 
 class SyntaxError {
     constructor(
-        public expected = '',
-        public found = '',
+        public message = '',
         public location = new FileLocation(),
     ) {}
 
@@ -100,6 +99,14 @@ class Disjunction extends Junction {
             }
             return result;
         }
+        const nextToken = tokens[0]!;
+        if(bestMatchedError.location.index === nextToken.location.index) {
+            const {row, column} = nextToken.location;
+            return new SyntaxError(
+                `Syntax error at row ${row} column ${column}. Expected <${this.name}> got "${nextToken.value}"`,
+                nextToken.location
+            )
+        }
         return bestMatchedError;
     }
 }
@@ -113,17 +120,21 @@ class Terminal extends CfgRule {
         return [];
     }
 
-    getExpectedAsString() {
-        return this.expected instanceof RegExp ? this.expected.source : this.expected;
-    }
-
     parse(tokens: Token[], cfg: Cfg) {
         const nextToken = tokens[0];
         if(!nextToken) {
-            return new SyntaxError(this.getExpectedAsString(), '', new FileLocation(-1, -1, Infinity));
+            return new SyntaxError(
+                'Syntax error at end of file',
+                new FileLocation(-1, -1, Infinity)
+            );
         }
         if(nextToken.type !== this.name) {
-            return new SyntaxError(this.getExpectedAsString(), nextToken.value, nextToken.location);
+            const {row, column} = nextToken.location;
+            const expectedString = this.expected instanceof RegExp ? `<${this.name}>` : `"${this.expected}"`
+            return new SyntaxError(
+                `Syntax error at row ${row} column ${column}. Expected ${expectedString} got "${nextToken.value}"`,
+                nextToken.location
+            );
         }
         return new Syntax(
             this.name,
@@ -216,12 +227,7 @@ export class Cfg {
     parseAll(tokens: Token[], rulename: string) {
         const syntax = this.parseNext(tokens, rulename);
         if(syntax instanceof SyntaxError) {
-            if(syntax.location.index === Infinity) {
-                console.error(chalk.red(`Syntax error at end of file`));
-            } else {
-                const {row, column} = syntax.location;
-                console.error(chalk.red(`Syntax error at row ${row} column ${column}. Expected "${syntax.expected}" got "${syntax.found}"`));
-            }
+            console.error(chalk.red(syntax.message));
             exit(1);
         }
         if(syntax.tokens < tokens.length) {
