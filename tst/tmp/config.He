@@ -1,8 +1,9 @@
 [
+  % this is a comment %
   app = [
     name = "test-config",
     version = "0.0.1",
-    environment = "dev"
+    environment = "dev",
   ],
   database = [
     host = "127.0.0.1",

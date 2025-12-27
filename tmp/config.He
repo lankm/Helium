@@ -1,4 +1,5 @@
 [
+  % this is a comment %
   app = [
     name = "test-config",
     version = "0.0.1",
