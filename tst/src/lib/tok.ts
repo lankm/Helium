@@ -1,23 +1,34 @@
-type location = {
-    row: number,
-    col: number,
+export class FileLocation {
+    constructor(
+        public row: number,
+        public column: number,
+    ) {}
 }
-export type token = {
-    type: string,
-    value?: string,
-    location: location
+export class Token {
+    constructor(
+        public type: string,
+        public value: string | null,
+        public location: FileLocation,
+    ) {}
 }
+export class TokenType {
+    constructor(
+        public regex: RegExp,
+        public isConstant: boolean,
+    ) {}
+}
+
 type tokenTypes = {
-    [type: string]: {regex: RegExp, constant: boolean}
+    [type: string]: TokenType
 }
 
 export class Tokenizer {
     private input: string;
-    private location: location = {row:1,col:1};
+    private location: FileLocation = new FileLocation(1,1);
 
     private tokenTypes: tokenTypes;
     private excludedTypes: string[];
-    private tokens: token[] = [];
+    private tokens: Token[] = [];
 
     constructor(input: string, tokenTypes: tokenTypes, excludedTypes: string[] = []) {
         this.input = input;
@@ -27,18 +38,11 @@ export class Tokenizer {
 
     private parseNextToken() {
         // see which patterns match and pick the first one
-        const token: token | undefined = Object.entries(this.tokenTypes)
+        const token: Token | undefined = Object.entries(this.tokenTypes)
           .map(([name, regexData]) => {
             const match = this.input.match(regexData.regex);
             if(!match) return undefined;
-            return {
-                type: name,
-                value: match[0],
-                location: {
-                    row: this.location.row,
-                    col: this.location.col,
-                }
-            }
+            return new Token( name, match[0], this.location );
           })
           .find(token => token);
         if(!token) { return false; }
@@ -48,15 +52,15 @@ export class Tokenizer {
         const consumedString = this.input.slice(0, consumed);
         const consumedLineCount = consumedString.split('\n').length - 1;
         this.location.row += consumedLineCount;
-        this.location.col = consumedLineCount
+        this.location.column = consumedLineCount
             ? consumedString.slice(consumedString.lastIndexOf('\n')).length
-            : this.location.col + consumed;
+            : this.location.column + consumed;
         this.input = this.input.slice(token.value!.length);
         
         // add token to list
         if(!this.excludedTypes.includes(token.type)) {
-            if(this.tokenTypes[token.type]!.constant){
-                delete token.value;
+            if(this.tokenTypes[token.type]!.isConstant){
+                token.value = null;
             }
             this.tokens.push(token);
         }
@@ -85,10 +89,10 @@ export class TokenizerBuilder {
         const regex = isString
             ? match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             : match.source;
-        this.tokenTypes[name] = {
-            regex: new RegExp('^' + regex),
-            constant: isString,
-        };
+        this.tokenTypes[name] = new TokenType(
+            new RegExp('^' + regex),
+            isString,
+        );
         return this;
     }
     public exclude(...names: string[]) {

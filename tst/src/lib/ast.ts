@@ -1,20 +1,28 @@
 import { exit } from "process";
-import type { token } from "./tok.js";
+import type { FileLocation, Token } from "./tok.js";
 
-export type syntax = {
-    name: string,
-    tokens?: number,
-    data?: any
-};
+class SyntaxError {
+    constructor(
+        public message: string,
+        public location: FileLocation,
+    ) {}
+}
+class Syntax {
+    constructor(
+        public name: string,
+        public tokens: number | null,
+        public data: any,
+    ) {}
+}
 
-type CfgRules = {[id:string]:CfgRule};
+type CfgRules = {[id:string]: CfgRule};
 abstract class CfgRule {
     name: string
     constructor (name: string) {
         this.name = name;
     }
 
-    abstract parse(tokens: token[], cfg: Cfg): syntax | null;
+    abstract parse(tokens: Token[], cfg: Cfg): Syntax | null;
 
     validateRulesExist(rulenames: string[], cfg: Cfg): string[] {
         const errors: string[] = [];
@@ -39,9 +47,9 @@ abstract class Junction extends CfgRule {
     }
 }
 class Conjunction extends Junction {
-    parse(tokens: token[], cfg: Cfg) {
+    parse(tokens: Token[], cfg: Cfg) {
         let consumedTokens = 0;
-        let parts: syntax[] = [];
+        let parts: Syntax[] = [];
 
         for(const rule of this.rules) {
             // parse single part
@@ -51,7 +59,7 @@ class Conjunction extends Junction {
             // token buffer management
             tokens = tokens.slice(result.tokens!);
             consumedTokens += result.tokens!;
-            delete result.tokens;
+            result.tokens = null;
 
             // add to list if meaningful
             if(result.data) parts.push(result);
@@ -65,7 +73,7 @@ class Conjunction extends Junction {
     }
 }
 class Disjunction extends Junction {
-    parse(tokens: token[], cfg: Cfg) {
+    parse(tokens: Token[], cfg: Cfg) {
         return this.rules
           .map(rule => cfg.parseQuiet(tokens, rule))
           .find(syntax => syntax) ?? null;
@@ -81,7 +89,7 @@ class Terminal extends CfgRule {
         return [];
     }
 
-    parse(tokens: token[], cfg: Cfg) {
+    parse(tokens: Token[], cfg: Cfg) {
         const nextToken = tokens[0];
         if(!nextToken) {
             return null;
@@ -119,16 +127,16 @@ class List extends CfgRule {
     }
 
 
-    parse(tokens: token[], cfg: Cfg) {
+    parse(tokens: Token[], cfg: Cfg) {
         let consumedTokens = 0;
-        let parts: syntax[] = [];
+        let parts: Syntax[] = [];
 
         // left opening
         const left = cfg.parseQuiet(tokens, this.left);
         if(left === null) return null;
         tokens = tokens.slice(left.tokens!);
         consumedTokens += left.tokens!;
-        delete left.tokens;
+        left.tokens = null;
         if(left.data) parts.push(left);
 
         let content = cfg.parseQuiet(tokens, this.content);
@@ -136,7 +144,7 @@ class List extends CfgRule {
             // first item
             tokens = tokens.slice(content.tokens!);
             consumedTokens += content.tokens!;
-            delete content.tokens;
+            content.tokens = null;
             if(content.data) parts.push(content);
             while(true) {
                 // delimeters
@@ -144,7 +152,7 @@ class List extends CfgRule {
                 if(delimit === null) break;
                 tokens = tokens.slice(delimit.tokens!);
                 consumedTokens += delimit.tokens!;
-                delete delimit.tokens;
+                delimit.tokens = null;
                 if(delimit.data) parts.push(delimit);
                 
                 // items
@@ -152,7 +160,7 @@ class List extends CfgRule {
                 if(content === null) break;
                 tokens = tokens.slice(content.tokens!);
                 consumedTokens += content.tokens!;
-                delete content.tokens;
+                content.tokens = null;
                 if(content.data) parts.push(content);
             }
         }
@@ -162,7 +170,7 @@ class List extends CfgRule {
         if(right === null) return null;
         tokens = tokens.slice(right.tokens!);
         consumedTokens += right.tokens!;
-        delete right.tokens;
+        right.tokens = null;
         if(right.data) parts.push(right);
         
         return {
@@ -191,22 +199,22 @@ export class Cfg {
         }
     }
 
-    parse(tokens: token[], rulename: string) {
+    parse(tokens: Token[], rulename: string) {
         const syntax = this.parseQuiet(tokens, rulename);
         if(syntax === null) {
             const lastToken = tokens[0];
             if(!lastToken) {
                 console.log(`Syntax error at end of file`);
             } else {
-                const {row, col} = lastToken.location;
-                console.log(`Syntax error at row ${row} column ${col}`);
+                const {row, column} = lastToken.location;
+                console.log(`Syntax error at row ${row} column ${column}`);
             }
             exit();
         }
-        delete syntax.tokens;
+        syntax.tokens = null;
         return syntax;
     }
-    parseQuiet(tokens: token[], rulename: string) {
+    parseQuiet(tokens: Token[], rulename: string) {
         return this.rules[rulename]!.parse(tokens, this);
     }
 }
