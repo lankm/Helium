@@ -1,9 +1,11 @@
 import { exit } from "process";
-import { FileLocation, type Token } from "./tok.js";
+import { FileLocation, TokenType, type Token } from "./tok.js";
+import chalk from "chalk";
 
 class SyntaxError {
     constructor(
         public expected = '',
+        public found = '',
         public location = new FileLocation(),
     ) {}
 
@@ -51,7 +53,7 @@ abstract class CfgRule {
         const errors: string[] = [];
         rulenames.forEach(rulename => {
             if(!cfg.rules[rulename]) {
-                errors.push(`${this.name} is invalid: ${rulename} does not exist`);
+                errors.push(`Rule "${this.name}" is invalid: subrule "${rulename}" does not exist`);
             }
         })
         return errors;
@@ -103,7 +105,7 @@ class Disjunction extends Junction {
 }
 
 class Terminal extends CfgRule {
-    constructor (name: string) {
+    constructor (name: string, public expected: RegExp | string) {
         super(name);
     }
 
@@ -111,27 +113,31 @@ class Terminal extends CfgRule {
         return [];
     }
 
+    getExpectedAsString() {
+        return this.expected instanceof RegExp ? this.expected.source : this.expected;
+    }
+
     parse(tokens: Token[], cfg: Cfg) {
         const nextToken = tokens[0];
         if(!nextToken) {
-            return new SyntaxError(this.name, new FileLocation(-1, -1, Infinity));
+            return new SyntaxError(this.getExpectedAsString(), '', new FileLocation(-1, -1, Infinity));
         }
         if(nextToken.type !== this.name) {
-            return new SyntaxError(this.name, nextToken.location);
+            return new SyntaxError(this.getExpectedAsString(), nextToken.value, nextToken.location);
         }
         return new Syntax(
             this.name,
             1,
-            nextToken.value
+            this.expected instanceof RegExp ? nextToken.value : null
         )
     }
 }
 
 class List extends CfgRule {
-    right: string;
+    left: string;
     delimit: string;
     content: string;
-    left: string;
+    right: string;
 
     constructor (name: string, left: string, content: string, delimit: string, right: string) {
         super(name);
@@ -143,7 +149,8 @@ class List extends CfgRule {
     
     validate(cfg: Cfg) {
         return this.validateRulesExist(
-            [this.left, this.content, this.delimit, this.right],
+            [this.left, this.content, this.delimit, this.right]
+                .filter(item => item !== null),
             cfg
         );
     }
@@ -163,19 +170,22 @@ class List extends CfgRule {
         result = this.parseNext(tokens, this.content, cfg, items, consumedTokens);
         if(result instanceof SyntaxError) return result;
 
-        while(true) {
-            // delimeters
-            result = this.parseNext(tokens, this.delimit, cfg, items, consumedTokens);
-            if(result instanceof SyntaxError) break;
-                
-            // items
-            result = this.parseNext(tokens, this.content, cfg, items, consumedTokens);
-            if(result instanceof SyntaxError) break;
+        let i = 0;
+        while(++i) {
+            // right closing
+            result = this.parseNext(tokens, this.right, cfg, items, consumedTokens);
+            if(result instanceof Syntax) break;
+
+            if(i%2==1) {
+                // delimeters
+                result = this.parseNext(tokens, this.delimit, cfg, items, consumedTokens);
+                if(result instanceof SyntaxError) return result;
+            } else {
+                // items
+                result = this.parseNext(tokens, this.content, cfg, items, consumedTokens);
+                if(result instanceof SyntaxError) return result;
+            }
         }
-        
-        // right closing
-        result = this.parseNext(tokens, this.right, cfg, items, consumedTokens);
-        if(result instanceof SyntaxError) return result;
         
         return new Syntax(
             this.name,
@@ -198,8 +208,8 @@ export class Cfg {
             errors = errors.concat(rule.validate(this));
         })
         if(errors.length) {
-            console.log(errors);
-            exit();
+            console.error(chalk.red(errors));
+            exit(1);
         }
     }
 
@@ -207,12 +217,18 @@ export class Cfg {
         const syntax = this.parseNext(tokens, rulename);
         if(syntax instanceof SyntaxError) {
             if(syntax.location.index === Infinity) {
-                console.log(`Syntax error at end of file`);
+                console.error(chalk.red(`Syntax error at end of file`));
             } else {
                 const {row, column} = syntax.location;
-                console.log(`Syntax error at row ${row} column ${column}. Expecting ${syntax.expected}`);
+                console.error(chalk.red(`Syntax error at row ${row} column ${column}. Expected "${syntax.expected}" got "${syntax.found}"`));
             }
-            exit();
+            exit(1);
+        }
+        if(syntax.tokens < tokens.length) {
+            const lastToken = tokens[syntax.tokens]!
+            const {row, column} = lastToken.location;
+            console.error(chalk.red(`Extra tokens at ${row} column ${column}. Got "${lastToken.value}"`));
+            exit(1);
         }
         return syntax;
     }
@@ -232,9 +248,9 @@ export class CfgBuilder {
         return this;
     }
     
-    terminals(tokenTypes: string[]) {
+    terminals(tokenTypes: TokenType[]) {
         tokenTypes.forEach(tokenType => {
-            this.rules[tokenType] = new Terminal(tokenType)
+            this.rules[tokenType.name] = new Terminal(tokenType.name, tokenType.regex)
         });
         return this;
     }

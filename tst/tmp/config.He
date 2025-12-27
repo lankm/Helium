@@ -13,7 +13,7 @@
     options = [
       pools = 10,
       timeout = 30,
-      ssl = 0
+      ssl = 0,
     ],
   ],
   logging = [
@@ -28,7 +28,7 @@
         type = "file",
         color = 0,
       ],
-    ]
+    ],
   ],
   features = [
     enable_cache = 1,
@@ -36,6 +36,6 @@
     experimental = [
       new_ui = 1,
       beta_mode = 1,
-    ]
-  ]
+    ],
+  ],
 ]

@@ -1,3 +1,6 @@
+import chalk from "chalk";
+import { exit } from "process";
+
 export class FileLocation {
     constructor(
         public row: number= 1,
@@ -15,15 +18,22 @@ export class FileLocation {
 export class Token {
     constructor(
         public type: string,
-        public value: string | null,
+        public value: string,
         public location: FileLocation,
     ) {}
 }
 export class TokenType {
     constructor(
-        public regex: RegExp,
-        public isConstant: boolean,
+        public name: string,
+        public regex: RegExp | string,
     ) {}
+
+    getRegex() {
+        const regexSource = this.regex instanceof RegExp
+            ? this.regex.source
+            : this.regex.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp('^' + regexSource);
+    }
 }
 
 type tokenTypes = {
@@ -48,7 +58,7 @@ export class Tokenizer {
         // see which patterns match and pick the first one
         const token: Token | undefined = Object.entries(this.tokenTypes)
           .map(([name, regexData]) => {
-            const match = this.input.match(regexData.regex);
+            const match = this.input.match(regexData.getRegex());
             if(!match) return undefined;
             return new Token( name, match[0], this.location.copy() );
           })
@@ -68,9 +78,6 @@ export class Tokenizer {
         
         // add token to list
         if(!this.excludedTypes.includes(token.type)) {
-            if(this.tokenTypes[token.type]!.isConstant){
-                token.value = null;
-            }
             this.tokens.push(token);
         }
         return true;
@@ -85,7 +92,7 @@ export class Tokenizer {
         return this.tokens;
     }
     public getTokenTypes() {
-        return Object.keys(this.tokenTypes);
+        return Object.values(this.tokenTypes);
     }
 }
 
@@ -94,13 +101,13 @@ export class TokenizerBuilder {
     private excludedTypes: string[] = [];
 
     public token(name: string, match: RegExp | string) {
-        const isString = typeof match === 'string';
-        const regex = isString
-            ? match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            : match.source;
+        if(name in this.tokenTypes) {
+            console.error(chalk.red(`Duplicate token name: "${name}"`));
+            exit(1);
+        }
         this.tokenTypes[name] = new TokenType(
-            new RegExp('^' + regex),
-            isString,
+            name,
+            match,
         );
         return this;
     }
