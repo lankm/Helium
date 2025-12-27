@@ -24,7 +24,7 @@ const getTokenizer = (input: string) => {
         .token('NA', /[\s\S]/)
         .build(input)
     ;
-    console.log(tokenizer.getAllTokens());
+    // console.log(tokenizer.getAllTokens());
     return tokenizer;
 }
 
@@ -38,7 +38,7 @@ const getAst = (tokenizer: Tokenizer) => {
         .build()
     ;
 
-    const ast = cfg.parse(tokenizer.getAllTokens(), 'VALUE');
+    const ast = cfg.parseAll(tokenizer.getAllTokens(), 'VALUE');
     console.log(ast);
     return ast;
 }

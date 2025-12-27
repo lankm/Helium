@@ -1,8 +1,16 @@
 export class FileLocation {
     constructor(
-        public row: number,
-        public column: number,
+        public row: number= 1,
+        public column: number = 1,
+        public index: number = 0,
     ) {}
+
+    isFurtherThan(other: FileLocation) {
+        return this.index > other.index;
+    }
+    copy() {
+        return new FileLocation(this.row, this.column, this.index);
+    }
 }
 export class Token {
     constructor(
@@ -24,7 +32,7 @@ type tokenTypes = {
 
 export class Tokenizer {
     private input: string;
-    private location: FileLocation = new FileLocation(1,1);
+    private location: FileLocation = new FileLocation();
 
     private tokenTypes: tokenTypes;
     private excludedTypes: string[];
@@ -42,7 +50,7 @@ export class Tokenizer {
           .map(([name, regexData]) => {
             const match = this.input.match(regexData.regex);
             if(!match) return undefined;
-            return new Token( name, match[0], this.location );
+            return new Token( name, match[0], this.location.copy() );
           })
           .find(token => token);
         if(!token) { return false; }
@@ -51,6 +59,7 @@ export class Tokenizer {
         const consumed = token.value!.length;
         const consumedString = this.input.slice(0, consumed);
         const consumedLineCount = consumedString.split('\n').length - 1;
+        this.location.index += consumed;
         this.location.row += consumedLineCount;
         this.location.column = consumedLineCount
             ? consumedString.slice(consumedString.lastIndexOf('\n')).length

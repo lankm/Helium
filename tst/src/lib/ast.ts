@@ -1,20 +1,29 @@
 import { exit } from "process";
-import type { FileLocation, Token } from "./tok.js";
+import { FileLocation, type Token } from "./tok.js";
 
 class SyntaxError {
     constructor(
-        public message: string,
-        public location: FileLocation,
+        public expected = '',
+        public location = new FileLocation(),
     ) {}
+
+    static getFurthest(a: SyntaxError, b: SyntaxError) {
+        return a.location.isFurtherThan(b.location) ? a : b;
+    }
 }
 class Syntax {
     constructor(
         public name: string,
-        public tokens: number | null,
+        public tokens: number,
         public data: any,
     ) {}
+
+    toJSON() {
+        return {name: this.name, data: this.data}
+    }
 }
 
+type numberRef = {value: number};
 type CfgRules = {[id:string]: CfgRule};
 abstract class CfgRule {
     name: string
@@ -22,7 +31,21 @@ abstract class CfgRule {
         this.name = name;
     }
 
-    abstract parse(tokens: Token[], cfg: Cfg): Syntax | null;
+    parseNext(tokens: Token[], rule: string, cfg: Cfg, items: Syntax[], consumedTokens: numberRef) {
+        // parse single part
+        const result = cfg.parseNext(tokens, rule);
+        if(result instanceof SyntaxError) return result;
+
+        // token buffer management
+        tokens.splice(0, result.tokens!);
+        consumedTokens.value += result.tokens!;
+
+        // add to list if meaningful
+        if(result.data) items.push(result);
+        return result;
+    }
+
+    abstract parse(tokens: Token[], cfg: Cfg): Syntax | SyntaxError;
 
     validateRulesExist(rulenames: string[], cfg: Cfg): string[] {
         const errors: string[] = [];
@@ -48,35 +71,34 @@ abstract class Junction extends CfgRule {
 }
 class Conjunction extends Junction {
     parse(tokens: Token[], cfg: Cfg) {
-        let consumedTokens = 0;
-        let parts: Syntax[] = [];
+        tokens = [...tokens];
+        let consumedTokens = { value: 0 };
+        let items: Syntax[] = [];
 
         for(const rule of this.rules) {
-            // parse single part
-            const result = cfg.parseQuiet(tokens, rule);
-            if(result === null) return null;
-
-            // token buffer management
-            tokens = tokens.slice(result.tokens!);
-            consumedTokens += result.tokens!;
-            result.tokens = null;
-
-            // add to list if meaningful
-            if(result.data) parts.push(result);
+            const result = this.parseNext(tokens, rule, cfg, items, consumedTokens);
+            if(result instanceof SyntaxError) return result;
         };
         
-        return {
-            name: this.name,
-            tokens: consumedTokens,
-            data: parts,
-        }
+        return new Syntax(
+            this.name,
+            consumedTokens.value,
+            items,
+        );
     }
 }
 class Disjunction extends Junction {
     parse(tokens: Token[], cfg: Cfg) {
-        return this.rules
-          .map(rule => cfg.parseQuiet(tokens, rule))
-          .find(syntax => syntax) ?? null;
+        let bestMatchedError = new SyntaxError();
+        for(const rule of this.rules) {
+            const result = cfg.parseNext(tokens, rule);
+            if(result instanceof SyntaxError) {
+                bestMatchedError = SyntaxError.getFurthest(bestMatchedError, result);
+                continue;
+            }
+            return result;
+        }
+        return bestMatchedError;
     }
 }
 
@@ -92,16 +114,16 @@ class Terminal extends CfgRule {
     parse(tokens: Token[], cfg: Cfg) {
         const nextToken = tokens[0];
         if(!nextToken) {
-            return null;
+            return new SyntaxError(this.name, new FileLocation(-1, -1, Infinity));
         }
         if(nextToken.type !== this.name) {
-            return null;
+            return new SyntaxError(this.name, nextToken.location);
         }
-        return {
-            name: this.name,
-            tokens: 1,
-            data: nextToken.value
-        }
+        return new Syntax(
+            this.name,
+            1,
+            nextToken.value
+        )
     }
 }
 
@@ -128,56 +150,38 @@ class List extends CfgRule {
 
 
     parse(tokens: Token[], cfg: Cfg) {
-        let consumedTokens = 0;
-        let parts: Syntax[] = [];
+        tokens = [...tokens];
+        const consumedTokens = {value: 0};
+        const items: Syntax[] = [];
+        let result: Syntax | SyntaxError;
 
         // left opening
-        const left = cfg.parseQuiet(tokens, this.left);
-        if(left === null) return null;
-        tokens = tokens.slice(left.tokens!);
-        consumedTokens += left.tokens!;
-        left.tokens = null;
-        if(left.data) parts.push(left);
+        result = this.parseNext(tokens, this.left, cfg, items, consumedTokens);
+        if(result instanceof SyntaxError) return result;
 
-        let content = cfg.parseQuiet(tokens, this.content);
-        if(content !== null) {
-            // first item
-            tokens = tokens.slice(content.tokens!);
-            consumedTokens += content.tokens!;
-            content.tokens = null;
-            if(content.data) parts.push(content);
-            while(true) {
-                // delimeters
-                const delimit = cfg.parseQuiet(tokens, this.delimit)
-                if(delimit === null) break;
-                tokens = tokens.slice(delimit.tokens!);
-                consumedTokens += delimit.tokens!;
-                delimit.tokens = null;
-                if(delimit.data) parts.push(delimit);
+        // first item
+        result = this.parseNext(tokens, this.content, cfg, items, consumedTokens);
+        if(result instanceof SyntaxError) return result;
+
+        while(true) {
+            // delimeters
+            result = this.parseNext(tokens, this.delimit, cfg, items, consumedTokens);
+            if(result instanceof SyntaxError) break;
                 
-                // items
-                content = cfg.parseQuiet(tokens, this.content)
-                if(content === null) break;
-                tokens = tokens.slice(content.tokens!);
-                consumedTokens += content.tokens!;
-                content.tokens = null;
-                if(content.data) parts.push(content);
-            }
+            // items
+            result = this.parseNext(tokens, this.content, cfg, items, consumedTokens);
+            if(result instanceof SyntaxError) break;
         }
         
         // right closing
-        const right = cfg.parseQuiet(tokens, this.right);
-        if(right === null) return null;
-        tokens = tokens.slice(right.tokens!);
-        consumedTokens += right.tokens!;
-        right.tokens = null;
-        if(right.data) parts.push(right);
+        result = this.parseNext(tokens, this.right, cfg, items, consumedTokens);
+        if(result instanceof SyntaxError) return result;
         
-        return {
-            name: this.name,
-            tokens: consumedTokens,
-            data: parts,
-        }
+        return new Syntax(
+            this.name,
+            consumedTokens.value,
+            items,
+        );
     }
 }
 
@@ -199,23 +203,21 @@ export class Cfg {
         }
     }
 
-    parse(tokens: Token[], rulename: string) {
-        const syntax = this.parseQuiet(tokens, rulename);
-        if(syntax === null) {
-            const lastToken = tokens[0];
-            if(!lastToken) {
+    parseAll(tokens: Token[], rulename: string) {
+        const syntax = this.parseNext(tokens, rulename);
+        if(syntax instanceof SyntaxError) {
+            if(syntax.location.index === Infinity) {
                 console.log(`Syntax error at end of file`);
             } else {
-                const {row, column} = lastToken.location;
-                console.log(`Syntax error at row ${row} column ${column}`);
+                const {row, column} = syntax.location;
+                console.log(`Syntax error at row ${row} column ${column}. Expecting ${syntax.expected}`);
             }
             exit();
         }
-        syntax.tokens = null;
         return syntax;
     }
-    parseQuiet(tokens: Token[], rulename: string) {
-        return this.rules[rulename]!.parse(tokens, this);
+    parseNext(tokens: Token[], rulename: string) {
+        return this.rules[rulename]!.parse(tokens, this)
     }
 }
 export class CfgBuilder {
