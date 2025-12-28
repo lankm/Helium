@@ -2,7 +2,7 @@ import { exit } from "process";
 import { FileLocation, TokenType, type Token } from "./tok.js";
 import chalk from "chalk";
 
-class SyntaxError {
+export class SyntaxError {
     constructor(
         public message = '',
         public location = new FileLocation(),
@@ -12,7 +12,7 @@ class SyntaxError {
         return a.location.isFurtherThan(b.location) ? a : b;
     }
 }
-class Syntax {
+export class Syntax {
     constructor(
         public name: string,
         public tokens: number,
@@ -52,7 +52,7 @@ abstract class CfgRule {
         const errors: string[] = [];
         rulenames.forEach(rulename => {
             if(!cfg.rules[rulename]) {
-                errors.push(`Rule "${this.name}" is invalid: subrule "${rulename}" does not exist`);
+                errors.push(`Rule "${this.name}" is invalid: subrule "${rulename}" does not exist.`);
             }
         })
         return errors;
@@ -219,7 +219,9 @@ export class Cfg {
             errors = errors.concat(rule.validate(this));
         })
         if(errors.length) {
-            console.error(chalk.red(errors));
+            errors.forEach(err => {
+                console.error(chalk.red(err));
+            });
             exit(1);
         }
     }
@@ -228,12 +230,6 @@ export class Cfg {
         const syntax = this.parseNext(tokens, rulename);
         if(syntax instanceof SyntaxError) {
             console.error(chalk.red(syntax.message));
-            exit(1);
-        }
-        if(syntax.tokens < tokens.length) {
-            const lastToken = tokens[syntax.tokens]!
-            const {row, column} = lastToken.location;
-            console.error(chalk.red(`Extra tokens at ${row} column ${column}. Got "${lastToken.value}"`));
             exit(1);
         }
         return syntax;

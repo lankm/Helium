@@ -32,7 +32,7 @@ export class TokenType {
         const regexSource = this.regex instanceof RegExp
             ? this.regex.source
             : this.regex.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        return new RegExp('^' + regexSource);
+        return new RegExp(regexSource, 'y');
     }
 }
 
@@ -41,40 +41,58 @@ type tokenTypes = {
 }
 
 export class Tokenizer {
-    private input: string;
     private location: FileLocation = new FileLocation();
-
-    private tokenTypes: tokenTypes;
-    private excludedTypes: string[];
     private tokens: Token[] = [];
+    private isRunning = false;
 
-    constructor(input: string, tokenTypes: tokenTypes, excludedTypes: string[] = []) {
-        this.input = input;
-        this.tokenTypes = tokenTypes;
-        this.excludedTypes = excludedTypes;
-    }
+    constructor(
+        private input: string,
+        private tokenTypes: tokenTypes,
+        private beginToken: TokenType | null,
+        private endToken: TokenType | null,
+        private excludedTypes: string[] = []
+    ) {}
 
     private parseNextToken() {
-        // see which patterns match and pick the first one
-        const token: Token | undefined = Object.entries(this.tokenTypes)
-          .map(([name, regexData]) => {
-            const match = this.input.match(regexData.getRegex());
-            if(!match) return undefined;
-            return new Token( name, match[0], this.location.copy() );
-          })
-          .find(token => token);
-        if(!token) { return false; }
+        let token: Token | undefined;
+        // beginning and ending cases
+        if (this.isRunning && this.location.index === this.input.length && this.endToken) {
+            token = new Token(this.endToken.name, '', this.location);
+            this.isRunning = false;
+        }
+        else if(!this.isRunning && this.location.index === 0 && this.beginToken) {
+            token = new Token(this.beginToken.name, '', this.location.copy());
+            this.isRunning = true;
+        } else {
+            // see which patterns match and pick the first one
+            token = Object.entries(this.tokenTypes)
+            .map(([name, regexData]) => {
+                const regex = regexData.getRegex();
 
-        // update state for next token
+                regex.lastIndex = this.location.index;
+                const match = regex.exec(this.input);
+
+                if(!match) return undefined;
+                return new Token( name, match[0], this.location.copy() );
+            })
+            .find(token => token);
+            if(!token) { return false; }
+        }
+
+
+        // update index in file
         const consumed = token.value!.length;
-        const consumedString = this.input.slice(0, consumed);
+        const start = this.location.index;
+        const end = start + consumed;
+        this.location.index = end;
+
+        // update row and column info
+        const consumedString = this.input.slice(start, end);
         const consumedLineCount = consumedString.split('\n').length - 1;
-        this.location.index += consumed;
         this.location.row += consumedLineCount;
         this.location.column = consumedLineCount
             ? consumedString.slice(consumedString.lastIndexOf('\n')).length
             : this.location.column + consumed;
-        this.input = this.input.slice(token.value!.length);
         
         // add token to list
         if(!this.excludedTypes.includes(token.type)) {
@@ -92,13 +110,18 @@ export class Tokenizer {
         return this.tokens;
     }
     public getTokenTypes() {
-        return Object.values(this.tokenTypes);
+        const typeNames = Object.values(this.tokenTypes);
+        if(this.beginToken) typeNames.push(this.beginToken);
+        if(this.endToken) typeNames.push(this.endToken);
+        return typeNames;
     }
 }
 
 export class TokenizerBuilder {
     private tokenTypes: tokenTypes = {};
     private excludedTypes: string[] = [];
+    private beginToken: TokenType | null = null;
+    private endToken: TokenType | null = null;
 
     public token(name: string, match: RegExp | string) {
         if(name in this.tokenTypes) {
@@ -115,10 +138,28 @@ export class TokenizerBuilder {
         this.excludedTypes = this.excludedTypes.concat(names);
         return this;
     }
-    public getTokenTypes() {
-        return Object.keys(this.tokenTypes);
+
+    public begin(name: string, match: RegExp | string) {
+        this.token(name, match);
+        this.beginToken = this.tokenTypes[name]!;
+        delete this.tokenTypes[name];
+        return this;
     }
+
+    public end(name: string, match: RegExp | string) {
+        this.token(name, match);
+        this.endToken = this.tokenTypes[name]!;
+        delete this.tokenTypes[name];
+        return this;
+    }
+
     public build(input: string) {
-        return new Tokenizer(input, this.tokenTypes, this.excludedTypes);
+        return new Tokenizer(
+            input,
+            this.tokenTypes,
+            this.beginToken,
+            this.endToken,
+            this.excludedTypes
+        );
     }
 }
