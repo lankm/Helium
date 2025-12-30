@@ -1,5 +1,5 @@
 import { exit } from "process";
-import { FileLocation, TokenType, type Token } from "./tok.js";
+import { FileLocation, TokenType, type Token } from "../lexer/tok.js";
 import chalk from "chalk";
 
 export class SyntaxError {

@@ -1,0 +1,6 @@
+stdlib = \"\deps.He"; % this is a comment without a closing bracket
+[str, print] = stdlib;
+
+(argv=[str]) : {
+    print("Hello World");
+}

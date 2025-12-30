@@ -1,7 +1,3 @@
-*.Be
-*.o
-*.exe
-tempCodeRunnerFile.*
-.vscode
-*/node_modules
-*/dist
+/dist
+/node_modules
+/out

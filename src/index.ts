@@ -1,9 +1,9 @@
 import fs from 'fs';
-import { Cfg, CfgBuilder, Syntax } from './lib/ast.js';
-import { Tokenizer, TokenizerBuilder } from './lib/tok.js';
+import { CfgBuilder, Syntax } from './parser/ast.js';
+import { Tokenizer, TokenizerBuilder } from './lexer/tok.js';
 
-const inFile  = './tmp/config.He';
-const outFile = './tmp/config.json';
+const inFile  = './test/fixtures//valid/config.He';
+const outFile = './out/config.json';
 
 const readFile = (file: string) => {
     return fs.readFileSync(file, 'utf8');
@@ -38,7 +38,7 @@ const getTokenizer = (input: string) => {
         .end('EOF', /$/)
         .build(input)
     ;
-    console.log(tokenizer.getAllTokens());
+    // console.log(tokenizer.getAllTokens());
     return tokenizer;
 }
 
