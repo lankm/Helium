@@ -1,20 +1,20 @@
-[
+config = [
   % this is a comment %
   app = [
     name = "test-config",
     version = "0.0.1",
-    environment = "dev",
+    environment = "dev"
   ],
   database = [
     host = "127.0.0.1",
-    port = 5432,
+    port = 5432 + 2 * 3,
     username = "test-user",
     password = "test-pass",
     options = [
       pools = 10,
-      timeout = 30,
+      timeout = 30.0,
       ssl = 0
-    ],
+    ]
   ],
   logging = [
     level = "debug",
@@ -22,20 +22,21 @@
     outputs = [
       [
         type = "console",
-        color = 1,
+        color = 1
       ],
       [
         type = "file",
-        color = 0,
-      ],
-    ]
+        color = 0
+      ]
+    ],
+    flags = ['v']
   ],
   features = [
     enable_cache = 1,
     max_items = 100,
     experimental = [
       new_ui = 1,
-      beta_mode = 1,
+      beta_mode = 1
     ]
   ]
 ]

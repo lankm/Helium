@@ -1,12 +1,55 @@
-import { readFile, tokenize } from "./lexing/lexer.js";
+import { Lexer } from "./lexing/Lexer.js";
+import { Parser } from "./parsing/Parser.js";
+import { getArguments, log, readFile } from "./util/Input.js";
 
-const main = (argv: string[]) => {
-    const inFile = argv[0] ?? './test/fixtures/valid/config.He';
-    const input = readFile(inFile);
-    const tokens = tokenize(input).ignore('Whitespace','Comment');
-    
-    console.log(tokens.reconstruct())
-}
+const lexer = new Lexer()
+    .tokens({
+        Identifier: /[^\W\d]\w*/,
+        Float:      /\d+(\.\d+)/,
+        Integer:    /\d+/,
+        String:     /"(\\.|[^"\\])*"/,
+        Character:  /'(\\.|[^'\\])*'/,
+    })
+    .ignore({
+        Comment:    /\%[^\%]*\%/,
+        Whitespace: /\s+/,
+    });
 
+const parser = new Parser()
+    .conjoin({
+        File:        ["Statements", ""],
+        Assignment:  ["Identifier", "=", "Expression"],
+        Ternary:     ["?", "Expression", ":", "Expression", "!", "Expression"],
+        While:       ["@", "Expression", ":", "Block"],
+        Import:      ["/", "String"],
+        Block:       ["{", "Statements", "}"],
+        Array:       ["[", "Expressions", "]"],
+        Record:      ["[", "Assignments", "]"],
+        Destructure: ["[", "Identifiers", "]", "=", "Expression"],
+    })
+    .disjoin({
+        Value:      ["Integer", "Float", "String", "Character", "_", "Identifier", "Record", "Array", "Import"],
+        Statement:  ["Assignment", "Destructure", "Ternary", "While"],
+        Expression: ["Sum"],
+    })
+    .delimit({
+        Statements:  ["Statement", ";"],
+        Assignments: ["Assignment", ","],
+        Expressions: ["Expression", ","],
+        Identifiers: ["Identifier", ","],
 
-main(process.argv.slice(2));
+        Sum: ["Product", "+"],
+        Product: ["Value", "*"],
+    });
+
+const main = () => {
+    const {fileName} = getArguments();
+    const input = readFile(fileName);
+    const tokens = lexer.tokenize(input);
+    const ast = parser.parse(tokens, "File");
+
+    // log(tokens);
+    log(ast);
+};
+main();
+

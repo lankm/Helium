@@ -1,0 +1,6 @@
+% this file is intented to test expression evaluation %
+a = 1;
+b = 2;
+c = 2 + 4;
+d = 3 * 7;
+e = 2 * 4 + 2 * 3

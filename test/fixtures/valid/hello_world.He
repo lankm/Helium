@@ -1,4 +1,4 @@
-stdlib = \"\deps.He";
+stdlib = /"/deps.He";
 [str, print] = stdlib;
 
 (argv=[str]) : {

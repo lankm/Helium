@@ -1,0 +1,37 @@
+bool = 0;
+true = 1;
+false = 0;
+string = "";
+
+
+TheBuilder = ():{
+    conflictedAbout = string;
+    isBlind = 0;
+    isYoung = 0;
+
+    this = [
+        isConflicted = (about=string):{
+            isConflicted = about;
+            ^ this;
+        },
+        aBlind = (status=bool):{
+            isBlind = status;
+            ^ this;
+        },
+        young = (status=bool):{
+            isYoung = status;
+            ^ this;
+        },
+        girl = ():[
+            isBlind = isBlind,
+            isYoung = isYoung,
+        ],
+    ];
+    ^ this;
+}
+
+toph = TheBuilder()
+    .isConflicted("about fighting")
+    .aBlind(true)
+    .young(true)
+    .girl()
