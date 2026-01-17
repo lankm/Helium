@@ -28,7 +28,6 @@ const parser = new Parser()
         Destructure: ["[", "Identifiers", "]", "=", "Expression"],
     })
     .disjoin({
-        Value:      ["Integer", "Float", "String", "Character", "_", "Identifier", "Record", "Array", "Import"],
         Statement:  ["Assignment", "Destructure", "Ternary", "While"],
         Expression: ["Sum"],
     })
@@ -37,10 +36,18 @@ const parser = new Parser()
         Assignments: ["Assignment", ","],
         Expressions: ["Expression", ","],
         Identifiers: ["Identifier", ","],
-
-        Sum: ["Product", "+"],
-        Product: ["Value", "*"],
-    });
+    })
+    .priority({
+        Expression: {
+            Value:   ["Integer", "Float", "String", "Character", "_", "Identifier", "Record", "Array", "Import"],
+            Member:  ["."],
+            Product: ["*", "/"],
+            Sum:     ["+", "-"],
+            Compare: ["==", "><", ">=", "=<", "<<", ">>"],
+            And:     ["&"],
+            Or:      ["|"],
+        }
+    })
 
 const main = () => {
     const {fileName} = getArguments();

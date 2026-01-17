@@ -79,6 +79,7 @@ export class Parser {
 
     // delimited list. must match one or more items
     private delimits: Record<string, [string, string]> = {};
+    private simplifyDelimit: string[] = [];
     public delimit(rules: Record<string, [string, string]>) {
         Object.assign(this.delimits, rules);
         return this;
@@ -102,7 +103,32 @@ export class Parser {
             items.push(result);
         }
 
+        if(items.length === 1 && this.simplifyDelimit.includes(name)) {
+            return items[0]!;
+        }
+
         return new ParseNode(name, items);
+    }
+
+    
+    // operator precidence. only supports infix
+    public priority(rules: Record<string, Record<string, string[]>>) {
+        Object.entries(rules).forEach(([name, subRules]) => {
+            let previousRule: string;
+            Object.entries(subRules).forEach(([subRule, ruleData], i) => {
+                if(i === 0) {
+                    this.disjoin({[subRule]: ruleData});
+                } else {
+                    const operatorsName = "_" + subRule;
+                    this.simplifyDelimit.push(subRule);
+                    this.disjoin({[operatorsName]: ruleData});
+                    this.delimit({[subRule]: [previousRule, operatorsName]});
+                }
+                previousRule = subRule;
+            });
+            this.disjoin({[name]: [previousRule!]});
+        });
+        return this;
     }
 
 
